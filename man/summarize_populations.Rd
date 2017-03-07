@@ -35,4 +35,3 @@ for some of the movement metrics along the trajectory. Values are rounded to the
 \examples{
 summarize_populations()
 }
-
