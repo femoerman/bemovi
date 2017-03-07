@@ -24,8 +24,17 @@ check_threshold_values <- function(to.data, raw.video.folder, ijmacs.folder, vid
   ## copy master copy of ImageJ macro there for treatment
   text <- readLines(paste(system.file(package="bemovi"), "/", "ImageJ_macros/Check_threshold.ijm", sep = ""))
   
+  ## if there is differencing (i.e., difference.lag>0)
+  if(difference.lag>0)
+    text <- readLines(paste(system.file(package="bemovi"), "/", "ImageJ_macros/Check_threshold.ijm", sep = ""))
+  ## if there is no differencing (i.e., difference.lag==0)
+  if(difference.lag==0)
+    text <- readLines(paste(system.file(package="bemovi"), "/", "ImageJ_macros/Check_threshold_no_differencing.ijm", sep = ""))
+  
+  
+  
   ## use regular expression to insert input and output directory
-  text[grep("avi_input =", text)] <- paste("avi_input = ", "'", video.dir, "';", sep = "")
+  text[grep("video_input =", text)] <- paste("video_input = ", "'", video.dir, "';", sep = "")
   text[grep("i =", text)] <- paste("i = ", vid_select, ";", sep = "")
   text[grep("lag =", text)] <- paste("lag = ", difference.lag, ";", sep = "")
   text[grep("setThreshold", text)] <- paste("setThreshold(", thresholds[1], ",", thresholds[2], ");", sep = "")
