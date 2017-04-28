@@ -109,6 +109,21 @@ link_particles <- function(to.data, particle.data.folder, trajectory.data.folder
     
   }
   
+  # before continuing: wait until last/ slowest file has been linked!
+  repeat{
+    # count running linker processes: I am actually counting java processes
+    act_linker_processes <- length(system("ps -A | grep java", intern = T))
+    
+    # end repeat loop if no linker processes are running anymore
+    if(act_linker_processes == 0){
+      break
+    }else{
+      # else wait for 1 second before checking again
+      Sys.sleep(1)
+    }
+    
+  }
+  
   # merge all files into one database
   data <- organise_link_data(to.data, trajectory.data.folder) 
   
