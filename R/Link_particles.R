@@ -62,7 +62,8 @@ link_particles <- function(to.data, particle.data.folder, trajectory.data.folder
         cmd <- paste0("java -Xmx", memory_per_linkerProcess, "m -Dparticle.linkrange=", linkrange, " -Dparticle.displacement=", disp, 
                       " -jar ", " \"", to.particlelinker, "/ParticleLinker.jar","\" ", "'", dir, "'", " \"", traj_out.dir,"/ParticleLinker_", 
                       all.files[j],"\"")
-        system(paste0(cmd, " \\&"))
+        # excure command and do not wait for process to end
+        system(paste0(cmd, " \\&"), wait =F)
       }
       
       if (.Platform$OS.type == "windows") {
@@ -79,7 +80,7 @@ link_particles <- function(to.data, particle.data.folder, trajectory.data.folder
       }
       
       #delete working dir
-      unlink(dir, recursive = TRUE)
+      #unlink(dir, recursive = TRUE)
                 
     }
     
@@ -88,7 +89,25 @@ link_particles <- function(to.data, particle.data.folder, trajectory.data.folder
       
     }
     
+    # wait before continuing with loop until less linker processes run than maximally allowed
+    repeat{
+      # count running linker processes: I am actually counting java processes
+      act_linker_processes <- length(system("ps -A | grep java", intern = T))
+      
+      # end repeat loop if less linker processes run than allowed
+      if(act_linker_processes < max_linker_processes){
+        break
+      }else{
+        # else wait for 1 second before checking again
+        Sys.sleep(1)
+      }
+      
+    }
+    
   }
+  
+  # delete working directories
+  unlink(paste0(to.data, gsub(".cxd", "", sub(".ijout.txt", "", all.files))), recursive = T)
   
   # merge all files into one database
   data <- organise_link_data(to.data, trajectory.data.folder) 
