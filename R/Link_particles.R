@@ -30,6 +30,11 @@ link_particles <- function(to.data, particle.data.folder, trajectory.data.folder
   dir.create(traj_out.dir, showWarnings = F)
   all.files <- dir(PA_output_dir, pattern = ".ijout.txt")
   
+  # determine how many proceses to run in parallel based on memory usage and available cores
+  mem_ratio <- floor(memory/memory_per_linkerProcess)
+  no_cores <- detectCores()
+  max_linker_processes <- min(c(mem_ratio, no_cores - 1))
+  
   for (j in start_vid:length(all.files)) {
     
     PA_data <- read.table(paste0(PA_output_dir, "/", all.files[j]), sep = "\t", header = T)
@@ -54,7 +59,7 @@ link_particles <- function(to.data, particle.data.folder, trajectory.data.folder
       
       ## run ParticleLinker
       if (.Platform$OS.type == "unix") {
-        cmd <- paste0("java -Xmx", memory, "m -Dparticle.linkrange=", linkrange, " -Dparticle.displacement=", disp, 
+        cmd <- paste0("java -Xmx", memory_per_linkerProcess, "m -Dparticle.linkrange=", linkrange, " -Dparticle.displacement=", disp, 
                       " -jar ", " \"", to.particlelinker, "/ParticleLinker.jar","\" ", "'", dir, "'", " \"", traj_out.dir,"/ParticleLinker_", 
                       all.files[j],"\"")
         system(paste0(cmd, " \\&"))
