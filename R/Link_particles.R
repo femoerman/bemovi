@@ -6,7 +6,8 @@
 #' @param to.data path to the working directory 
 #' @param particle.data.folder directory where the ParticleAnalyzer output is saved (as text files) (temporary)
 #' @param trajectory.data.folder directory where the ParticleLinker is saved (as text files) (temporary???)
-#' @param memory numeric value specifying the max amount of memory allocated to the ParticleLinker (defaults to 512)
+#' @param memory numeric value specifying the max amount of memory allocated in general (defaults to 512)
+#' @param memory_per_linkerProcess numeric value specifying the max amount of memory allocated to one instance of the ParticleLinker (defaults to 512)
 #' @param linkrange numeric value passed to the ParticleLinker specifying the range of adjacent frames which
 #' are taken into account when a trajectory is re-constructed 
 #' @param disp numeric value that specifies the maximum displacement of a given particle between two frames

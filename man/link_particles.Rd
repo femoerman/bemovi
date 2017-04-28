@@ -22,7 +22,9 @@ are taken into account when a trajectory is re-constructed}
 
 \item{start_vid}{numeric value to indicate whether the linking should be started with a video other than the first}
 
-\item{memory}{numeric value specifying the max amount of memory allocated to the ParticleLinker (defaults to 512)}
+\item{memory}{numeric value specifying the max amount of memory allocated in general (defaults to 512)}
+
+\item{memory_per_linkerProcess}{numeric value specifying the max amount of memory allocated to one instance of the ParticleLinker (defaults to 512)}
 }
 \value{
 Returns a single text file per video containing the X- and Y-coordinates, the frame and a trajectory ID. The files are than automatically merged into a data.table
