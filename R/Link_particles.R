@@ -20,6 +20,7 @@
 #' (e.g. Turch (1998): Quantitative Analysis of Movement: Measuring and Modeling Population Redistribution in Animals and Plants, Sinauer Associates, Sunderland).
 #' @import parallel 
 #' @export
+
 link_particles <- function(to.data, particle.data.folder, trajectory.data.folder, linkrange = 1, disp = 10, start_vid = 1, memory = 512, memory_per_linkerProcess = 512) {
 
   #Slice<-to.particlelinker<-java.path<-pixel_to_scale<-fps<-NULL
