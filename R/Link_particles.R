@@ -2,6 +2,7 @@
 #' 
 #' The function takes the XY-coordinates provided by the ImageJ ParticleAnalyzer and uses a standalone version of the ImageJ MOSAIC plugin ParticleLinker to create trajectories. 
 #' This requires some creation of temporary files, which are subsequently deleted.
+#' Multiple instances of the particle linker can be called in unix OS
 #' @param to.data path to the working directory 
 #' @param particle.data.folder directory where the ParticleAnalyzer output is saved (as text files) (temporary)
 #' @param trajectory.data.folder directory where the ParticleLinker is saved (as text files) (temporary???)

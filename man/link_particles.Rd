@@ -5,7 +5,8 @@
 \title{Function to link the particle coordinates through time}
 \usage{
 link_particles(to.data, particle.data.folder, trajectory.data.folder,
-  linkrange = 1, disp = 10, start_vid = 1, memory = 512)
+  linkrange = 1, disp = 10, start_vid = 1, memory = 512,
+  memory_per_linkerProcess = 512)
 }
 \arguments{
 \item{to.data}{path to the working directory}
@@ -34,4 +35,5 @@ and the current fix and finally the relative angle (turning angle) and absolute 
 \description{
 The function takes the XY-coordinates provided by the ImageJ ParticleAnalyzer and uses a standalone version of the ImageJ MOSAIC plugin ParticleLinker to create trajectories. 
 This requires some creation of temporary files, which are subsequently deleted.
+Multiple instances of the particle linker can be called in unix OS
 }
