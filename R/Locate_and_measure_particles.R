@@ -12,6 +12,8 @@
 #' @param thresholds vector containing the min and max threshold values (defaults to c(10,255))
 #' @param IJ.path path to ImageJ folder, containing the 'ij.jar' executable
 #' @param memory numeric value specifying the amount of memory available to ImageJ (defaults to 512)
+#' @param memory_per_identifier numeric value specifying the amount of memory to reserve for every imageJ instance (defaults to 30000)
+#' @param max.cores numeric value, specifying the maximum number of cores to use for particle identification (defaults to # of machine cores - 1)
 #' @return saves the output of the ParticleAnalyzer function of ImageJ as a text file in the output directory and then assembles the data into a single database 
 #' called 'particle.RData'. This data.frame contains information about the following properties: the area (transversal cut), 
 #' the mean, minimum and maximum of the grey value, the perimeter, width, length and angle with the dominant-axis of a fitted ellipse, and finally shape parameters such as
@@ -19,47 +21,72 @@
 #' @export 
 
 locate_and_measure_particles <- function(to.data, raw.video.folder, particle.data.folder, difference.lag, min_size=0, max_size=10000, 
-thresholds = c(10, 255), IJ.path, memory = 512) {
+thresholds = c(10, 255), IJ.path, memory = 512, memory_per_identifier=10000, max.cores=0) {
+  #determing the number of processes that can be run in parallel
+  max.cores <- min(ifelse(max.cores==0, detectCores()-1, max.cores), detectCores()-1)
+  processes <- max(min(max.cores, memory %/% memory_per_identifier), 1)
   
-  #ijmacs.folder<-NULL
-  
+  #Define location of video folder
   video.dir <- paste(to.data, raw.video.folder, sep = "")
-  
-  ## copy master copy of ImageJ macro there for treatment
-  ## if there is differencing (i.e., difference.lag>0)
-  if(difference.lag>0)
-  text <- readLines(paste0(system.file(package="bemovi"), "/", "ImageJ_macros/Video_to_morphology.ijm"))
-  ## if there is no differencing (i.e., difference.lag==0)
-  if(difference.lag==0)
-  text <- readLines(paste0(system.file(package="bemovi"), "/", "ImageJ_macros/Video_to_morphology_no_differencing.ijm"))
-    
-  ## use regular expression to insert input & output directory as well as difference lag
-  text[grep("video_input = ", text)] <- paste("video_input = ", "'", video.dir, "';", sep = "")
-  text[grep("video_output = ", text)] <- paste("video_output = ", "'", to.data, particle.data.folder, "';", sep = "")
-  text[grep("lag = ", text)] <- paste("lag = ", difference.lag, ";", sep = "")
-  text[grep("setThreshold", text)] <- paste("setThreshold(", thresholds[1], ",", thresholds[2], ");", sep = "")
-  text[grep("size=", text)] <- paste('run("Analyze Particles...", "size=',min_size,'-',max_size,' circularity=0.00-1.00 show=Nothing clear stack");',sep = "")
-    
-  ## re-create ImageJ macro for batch processing of video files with Particle Analyzer
-  if (.Platform$OS.type == "windows") {
-    dir.create(paste0(to.data, ijmacs.folder), showWarnings = F)
-    
-    writeLines(text, con = paste(to.data,ijmacs.folder,"Video_to_morphology_tmp.ijm", sep = ""))}
-  if (.Platform$OS.type == "unix") {
-    dir.create(paste0(to.data, ijmacs.folder), showWarnings = F)
-    writeLines(text, con = paste0(to.data, ijmacs.folder, "Video_to_morphology_tmp.ijm"))}
   
   ## create directory to store Particle Analyzer data
   dir.create(paste0(to.data, particle.data.folder), showWarnings = FALSE)
   
-  ## run to process video files by calling ImageJ
-  if (.Platform$OS.type == "unix") 
-    cmd <- paste0("java -Xmx", memory, "m -jar ", IJ.path, "/ij.jar", " -ijpath ", IJ.path, " -macro ","'", 
-                  to.data, ijmacs.folder, "Video_to_morphology_tmp.ijm'")
-  if (.Platform$OS.type == "windows")
-   cmd <- paste0("\"", IJ.path,"\"", " -macro ","\"", paste0(gsub("/", "\\\\", paste0(to.data, ijmacs.folder))), "Video_to_morphology_tmp.ijm", "\"")
+  ##Parallellized steps for video analysis steps
+  ##If there can be only one process, use the original code
+  if(processes==1){
+    #ijmacs.folder<-NULL
+    
+    ## copy master copy of ImageJ macro there for treatment
+    ## if there is differencing (i.e., difference.lag>0)
+    if(difference.lag>0)
+      text <- readLines(paste0(system.file(package="bemovi"), "/", "ImageJ_macros/Video_to_morphology.ijm"))
+    ## if there is no differencing (i.e., difference.lag==0)
+    if(difference.lag==0)
+      text <- readLines(paste0(system.file(package="bemovi"), "/", "ImageJ_macros/Video_to_morphology_no_differencing.ijm"))
+    
+    ## use regular expression to insert input & output directory as well as difference lag
+    text[grep("video_input = ", text)] <- paste("video_input = ", "'", video.dir, "';", sep = "")
+    text[grep("video_output = ", text)] <- paste("video_output = ", "'", to.data, particle.data.folder, "';", sep = "")
+    text[grep("lag = ", text)] <- paste("lag = ", difference.lag, ";", sep = "")
+    text[grep("setThreshold", text)] <- paste("setThreshold(", thresholds[1], ",", thresholds[2], ");", sep = "")
+    text[grep("size=", text)] <- paste('run("Analyze Particles...", "size=',min_size,'-',max_size,' circularity=0.00-1.00 show=Nothing clear stack");',sep = "")
+    
+    ## re-create ImageJ macro for batch processing of video files with Particle Analyzer
+    if (.Platform$OS.type == "windows") {
+      dir.create(paste0(to.data, ijmacs.folder), showWarnings = F)
+      
+      writeLines(text, con = paste(to.data,ijmacs.folder,"Video_to_morphology_tmp.ijm", sep = ""))}
+    if (.Platform$OS.type == "unix") {
+      dir.create(paste0(to.data, ijmacs.folder), showWarnings = F)
+      writeLines(text, con = paste0(to.data, ijmacs.folder, "Video_to_morphology_tmp.ijm"))}
+    
+    #Call particle analyzer
+    if (.Platform$OS.type == "unix") 
+      cmd <- paste0("java -Xmx", memory, "m -jar ", IJ.path, "/ij.jar", " -ijpath ", IJ.path, " -macro ","'", 
+                    to.data, ijmacs.folder, "Video_to_morphology_tmp.ijm'")
+    if (.Platform$OS.type == "windows")
+      cmd <- paste0("\"", IJ.path,"\"", " -macro ","\"", paste0(gsub("/", "\\\\", paste0(to.data, ijmacs.folder))), "Video_to_morphology_tmp.ijm", "\"")
+    system(cmd)
+  } 
   
-  system(cmd)
+  #If more than one core is available, the following code will be run
+  else {
+    ##First get a list of all the video files
+    video.files <- list.files(path = video.dir, pattern = paste("\\.", video.format, sep=""))
+    video.files <- paste(video.dir, video.files, sep="/")
+    video.files.df <- as.data.frame(video.files)
+    
+    #Divide the videos between the processors that can be used
+    video.files.df$process <- ceiling(seq(from=0.001, to=processes, length=nrow(video.files.df)))
+    
+    #Run parallel processes for particle identification
+    mclapply(1:processes, parallel_locate_and_measure, to.data, raw.video.folder, particle.data.folder, difference.lag, min_size, max_size, 
+      thresholds, IJ.path, memory,  memory_per_identifier, video.files.df, video.dir, mc.cores = processes)
+   
+    
+  }
+  
   
   organise_particle_data(to.data, particle.data.folder)
   

@@ -22,15 +22,20 @@
 #' @export
 
 create_overlays <- function(traj.data, to.data, merged.data.folder, raw.video.folder, temp.overlay.folder, overlay.folder, 
-                                  width, height, difference.lag, type = "traj",  predict_spec=F, contrast.enhancement = 0, IJ.path, memory = 512) {
+                                  width, height, difference.lag, type = "traj",  predict_spec=F, contrast.enhancement = 0, IJ.path, 
+                            memory = 512, max.cores=0, memory_per_overlay=30000) {
   
-  #traj.data<-trajectory<-ijmacs.folder<-NULL
+  #determing the number of processes that can be run in parallel
+  max.cores <- min(ifelse(max.cores==0, detectCores()-1, max.cores), detectCores()-1)
+  processes <- max(min(max.cores, memory %/% memory_per_overlay), 1)
   
+  #Define location of video folder
   video.dir <- paste(to.data, raw.video.folder, sep = "")
   
-  load(file = paste(to.data,merged.data.folder, "Master.RData", sep = "/")) 
+  load(file = paste(to.data,merged.data.folder, "Master.RData", sep = "/"))
   file_names <- unique(traj.data$file)
   
+  if(processes==1){
   ## change path for output
   dir.create(paste0(to.data, temp.overlay.folder), showWarnings = F)
     for (i in 1:length(file_names)) {
@@ -157,6 +162,22 @@ create_overlays <- function(traj.data, to.data, merged.data.folder, raw.video.fo
     
   ## run ImageJ macro
   system(cmd)
+  
+  }
+  else {
+    ##First get a list of all the video files
+    video.files <- list.files(path = video.dir, pattern = paste("\\.", video.format, sep=""))
+    video.files <- paste(video.dir, video.files, sep="/")
+    video.files.df <- as.data.frame(video.files)
+    
+    #Divide the videos between the processors that can be used
+    video.files.df$process <- ceiling(seq(from=0.001, to=processes, length=nrow(video.files.df)))
+    
+    mclapply(1:processes, create_overlays_parallel, video.files.df, traj.data, to.data, merged.data.folder, raw.video.folder, temp.overlay.folder, overlay.folder, 
+                                                     width, height, difference.lag, type,  predict_spec, contrast.enhancement, IJ.path, memory, mc.cores=processes)
+             
+             
+    }
   
 #   ## delete temporary file after execution
 #   if (.Platform$OS.type == "windows") 
