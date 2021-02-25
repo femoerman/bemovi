@@ -34,6 +34,9 @@ create_overlays_parallel <- function(process_ID, video.files.df, traj.data, to.d
   traj.data.filt <- traj.data[which(traj.data$file %in% videos), ]
   file_names <- unique(traj.data.filt$file)
   
+  ##Define folder with video files
+  video.dir <- paste(to.data, raw.video.folder, sep="")
+  
   #Make a temporary folder and move the videos there
   temp.dir <- paste0(video.dir, process_ID, sep="/")
   dir.create(temp.dir, showWarnings = F)
