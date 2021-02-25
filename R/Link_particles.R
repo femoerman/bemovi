@@ -2,10 +2,12 @@
 #' 
 #' The function takes the XY-coordinates provided by the ImageJ ParticleAnalyzer and uses a standalone version of the ImageJ MOSAIC plugin ParticleLinker to create trajectories. 
 #' This requires some creation of temporary files, which are subsequently deleted.
+#' Multiple instances of the particle linker can be called in unix OS
 #' @param to.data path to the working directory 
 #' @param particle.data.folder directory where the ParticleAnalyzer output is saved (as text files) (temporary)
 #' @param trajectory.data.folder directory where the ParticleLinker is saved (as text files) (temporary???)
-#' @param memory numeric value specifying the max amount of memory allocated to the ParticleLinker (defaults to 512)
+#' @param memory numeric value specifying the max amount of memory allocated in general (defaults to 512)
+#' @param memory_per_linkerProcess numeric value specifying the max amount of memory allocated to one instance of the ParticleLinker (defaults to 512)
 #' @param linkrange numeric value passed to the ParticleLinker specifying the range of adjacent frames which
 #' are taken into account when a trajectory is re-constructed 
 #' @param disp numeric value that specifies the maximum displacement of a given particle between two frames
@@ -16,9 +18,11 @@
 #' the step speed (step length/step duration), the gross displacement as the cumulative sum of the step lengths, the net displacement between the first fix of a given trajectory 
 #' and the current fix and finally the relative angle (turning angle) and absolute angle (in radians). For details on these metrics, please refer to a dedicated textbook 
 #' (e.g. Turch (1998): Quantitative Analysis of Movement: Measuring and Modeling Population Redistribution in Animals and Plants, Sinauer Associates, Sunderland).
+#' @import parallel 
 #' @export
-link_particles <- function(to.data, particle.data.folder, trajectory.data.folder, linkrange = 1, disp = 10, start_vid = 1, memory = 512) {
 
+link_particles <- function(to.data, particle.data.folder, trajectory.data.folder, linkrange = 1, disp = 10, start_vid = 1, memory = 512, memory_per_linkerProcess = 512) {
+  
   #Slice<-to.particlelinker<-java.path<-pixel_to_scale<-fps<-NULL
   
   if(!exists("to.particlelinker")) stop("Path to ParticleLinker not found. Please specify path in global options.")
@@ -28,6 +32,17 @@ link_particles <- function(to.data, particle.data.folder, trajectory.data.folder
   
   dir.create(traj_out.dir, showWarnings = F)
   all.files <- dir(PA_output_dir, pattern = ".ijout.txt")
+  
+  # determine how many proceses to run in parallel based on memory usage and available cores
+  mem_ratio <- floor(memory/memory_per_linkerProcess)
+  no_cores <- detectCores()
+  max_linker_processes <- min(c(mem_ratio, no_cores - 1))
+  
+  # vector for saving all PIDs for parallellisation
+  all_pids <- numeric()
+  
+  # counter variable for pids
+  pid_cnt <- 0
   
   for (j in start_vid:length(all.files)) {
     
@@ -53,33 +68,89 @@ link_particles <- function(to.data, particle.data.folder, trajectory.data.folder
       
       ## run ParticleLinker
       if (.Platform$OS.type == "unix") {
-        cmd <- paste0("java -Xmx", memory, "m -Dparticle.linkrange=", linkrange, " -Dparticle.displacement=", disp, 
+        cmd <- paste0("java -Xmx", memory_per_linkerProcess, "m -Dparticle.linkrange=", linkrange, " -Dparticle.displacement=", disp, 
                       " -jar ", " \"", to.particlelinker, "/ParticleLinker.jar","\" ", "'", dir, "'", " \"", traj_out.dir,"/ParticleLinker_", 
                       all.files[j],"\"")
-        system(paste0(cmd, " \\&"))
+        
+        # execute command, do not wait for process to end
+        system(paste0(cmd," & echo $! >",to.data,"tmp_pid.txt"), wait=F)
+        # wait 1 sec for writing process etc
+        Sys.sleep(1)
+        # save PID
+        pid_cnt <- pid_cnt + 1
+        all_pids[pid_cnt] <- as.numeric(read.table(file=paste0(to.data,"tmp_pid.txt"), header=F))
+        # remove temporary pid file
+        system(paste0("rm ",to.data,"tmp_pid.txt"))
+        
       }
       
       if (.Platform$OS.type == "windows") {
         
         if(!exists("java.path")) stop("Java path not found. Please specify path in global options.")
         
-      # previously hardcoded as "C:/Progra~2/java/jre7/bin/javaw.exe"
-       cmd <- paste0(java.path, " -Xmx", memory,"m -Dparticle.linkrange=", linkrange, " -Dparticle.displacement=", disp," -jar",
+        # previously hardcoded as "C:/Progra~2/java/jre7/bin/javaw.exe"
+        cmd <- paste0(java.path, " -Xmx", memory,"m -Dparticle.linkrange=", linkrange, " -Dparticle.displacement=", disp," -jar",
                       gsub("/","\\\\", paste0(" \"" ,to.particlelinker,"/ParticleLinker.jar")),"\" ",
                       gsub("/","\\\\", paste0(" ","\"" ,dir,"\"")),
                       gsub("/","\\\\", paste0(" ","\"", traj_out.dir, "/ParticleLinker_", all.files[j], "\"")))
-       
-      system(cmd)
+        
+        system(cmd)
       }
       
       #delete working dir
-      unlink(dir, recursive = TRUE)
-                
+      #unlink(dir, recursive = TRUE)
+      
     }
     
     if (length(PA_data[, 1]) == 0) {
       print(paste("***** No particles were detected in video", all.files[j], " -- check the raw video and also threshold values"))
       
+    }
+    
+    # wait before continuing with loop until less linker processes run than maximally allowed
+    repeat{
+      
+      #check which linker processes are still running
+      running_pids <- is.element(all_pids,as.numeric(system("pgrep java", intern=T)))
+      
+      # update list
+      all_pids <- all_pids[which(running_pids == T)]
+      pid_cnt <- length(all_pids)
+      
+      # count running linker processes: I am actually counting java processes
+      act_linker_processes <- pid_cnt
+      
+      # end repeat loop if less linker processes run than allowed
+      if(act_linker_processes < max_linker_processes){
+        break
+      }else{
+        # else wait for 1 second before checking again
+        Sys.sleep(1)
+      }
+      
+    }
+    
+  }
+  
+  # before continuing: wait until last/ slowest file has been linked!
+  repeat{
+    
+    #check which linker processes are still running
+    running_pids <- is.element(all_pids,as.numeric(system("pgrep java", intern=T)))
+    
+    # update list
+    all_pids <- all_pids[which(running_pids == T)]
+    pid_cnt <- length(all_pids)
+    
+    # count running linker processes: I am actually counting java processes
+    act_linker_processes <- pid_cnt
+    
+    # end repeat loop if no linker processes are running anymore
+    if(act_linker_processes == 0){
+      break
+    }else{
+      # else wait for 1 second before checking again
+      Sys.sleep(1)
     }
     
   }
@@ -89,4 +160,7 @@ link_particles <- function(to.data, particle.data.folder, trajectory.data.folder
   
   #calculate movement metrics for each fix and save to disk
   calculate_mvt(data,to.data,trajectory.data.folder,pixel_to_scale,fps)
+  
+  # delete working directories
+  unlink(paste0(to.data, gsub(".cxd", "", sub(".ijout.txt", "", all.files))), recursive = T)
 }
