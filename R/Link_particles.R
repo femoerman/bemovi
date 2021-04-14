@@ -25,6 +25,10 @@ link_particles <- function(to.data, particle.data.folder, trajectory.data.folder
   
   #Slice<-to.particlelinker<-java.path<-pixel_to_scale<-fps<-NULL
   
+  #Define a variable to capture a potential error
+  error <- NA
+  log <- ""
+  
   if(!exists("to.particlelinker")) stop("Path to ParticleLinker not found. Please specify path in global options.")
   
   PA_output_dir <- paste0(to.data, particle.data.folder)
@@ -73,7 +77,7 @@ link_particles <- function(to.data, particle.data.folder, trajectory.data.folder
                       all.files[j],"\"")
         
         # execute command, do not wait for process to end
-        system(paste0(cmd," & echo $! >",to.data,"tmp_pid.txt"), wait=F)
+        log <- c(log, system(paste0(cmd," & echo $! >",to.data,"tmp_pid.txt"), wait=F, intern = T))
         # wait 1 sec for writing process etc
         Sys.sleep(1)
         # save PID
@@ -94,7 +98,7 @@ link_particles <- function(to.data, particle.data.folder, trajectory.data.folder
                       gsub("/","\\\\", paste0(" ","\"" ,dir,"\"")),
                       gsub("/","\\\\", paste0(" ","\"", traj_out.dir, "/ParticleLinker_", all.files[j], "\"")))
         
-        system(cmd)
+        log <- c(log, system(cmd), intern=T)
       }
       
       #delete working dir
@@ -163,4 +167,8 @@ link_particles <- function(to.data, particle.data.folder, trajectory.data.folder
   
   # delete working directories
   unlink(paste0(to.data, gsub(".cxd", "", sub(".ijout.txt", "", all.files))), recursive = T)
+  
+  if(pmatch("java.lang.OutOfMemory", log)==1){
+    stop("Error: java ran out of memory for one or more linker processes. Please rerun the analyses while assigning more memory to each linker process")
+  }
 }
