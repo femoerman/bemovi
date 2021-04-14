@@ -36,12 +36,6 @@ parallel_locate_and_measure <- function(process_ID, to.data, raw.video.folder, p
   #Make a temporary folder and move the videos there
   temp.dir <- paste0(video.dir, process_ID, sep="/")
   dir.create(temp.dir, showWarnings = F)
-  if (.Platform$OS.type == "windows") {
-    for (file in video.files.filt){
-      system(paste("move", file, temp.dir))
-    }
-  }
-    
   if (.Platform$OS.type == "unix") {
     system(paste("mv -t", temp.dir, paste(unlist(video.files.filt), collapse=' ')))
   }
@@ -62,21 +56,12 @@ parallel_locate_and_measure <- function(process_ID, to.data, raw.video.folder, p
   text[grep("size=", text)] <- paste('run("Analyze Particles...", "size=',min_size,'-',max_size,' circularity=0.00-1.00 show=Nothing clear stack");',sep = "")
   
   ## re-create ImageJ macro for batch processing of video files with Particle Analyzer
-  if (.Platform$OS.type == "windows") {
-    ijmacs.file <- paste(to.data,ijmacs.folder,"Video_to_morphology_tmp", process_ID, ".ijm", sep = "")
-    dir.create(paste0(to.data, ijmacs.folder), showWarnings = F)
-    writeLines(text, con = ijmacs.file)}
-  
   if (.Platform$OS.type == "unix") {
     ijmacs.file <- paste0(to.data, ijmacs.folder, "Video_to_morphology_tmp", process_ID, ".ijm", sep = "")
     dir.create(paste0(to.data, ijmacs.folder), showWarnings = F)
     writeLines(text, con = ijmacs.file)}
   
   ##Create temporary copy of the imageJ folder
-  if (.Platform$OS.type == "windows") {
-    IJ.temp <- paste0(temp.dir, "ImageJ")
-    system(paste("Xcopy /E /I ", IJ.path, " ", IJ.temp, sep=""))}
-
   if (.Platform$OS.type == "unix") {
     IJ.temp <- paste0(temp.dir, "ImageJ")
     system(paste("cp -R ", IJ.path, " ", temp.dir, sep=""))}
@@ -85,9 +70,7 @@ parallel_locate_and_measure <- function(process_ID, to.data, raw.video.folder, p
   if (.Platform$OS.type == "unix") {
     cmd <- paste0("java -Xmx", memory, "m -jar ", IJ.temp, "/ij.jar", " -ijpath ", IJ.temp, " -macro ","'", 
                   ijmacs.file, "'")}
-  if (.Platform$OS.type == "windows"){
-    cmd <- paste0("\"", IJ.temp,"\"", " -macro ","\"", paste0(gsub("/", "\\\\", ijmacs.file, "'", "\"")))}
-  system(cmd)
+  error.log <- system(cmd, intern = T)
   
   #Move videos back to original folder and delete temporary folder
   temp.files <- list.files(path = temp.dir, pattern = paste("\\.", video.format, sep=""))
@@ -97,11 +80,7 @@ parallel_locate_and_measure <- function(process_ID, to.data, raw.video.folder, p
     system(paste("rm -r ", temp.dir))
   }
   
-  if (.Platform$OS.type == "windows"){
-    for (file in temp.files){
-      system(paste("move", file, video.dir))
-    }
-  system(paste("rmdir", temp.dir, "/s /q"))}
+  return(error.log)
 }
     
   

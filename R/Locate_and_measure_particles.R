@@ -12,7 +12,7 @@
 #' @param thresholds vector containing the min and max threshold values (defaults to c(10,255))
 #' @param IJ.path path to ImageJ folder, containing the 'ij.jar' executable
 #' @param memory numeric value specifying the amount of memory available to ImageJ (defaults to 512)
-#' @param memory_per_identifier numeric value specifying the amount of memory to reserve for every imageJ instance (defaults to 30000)
+#' @param memory.per.identifier numeric value specifying the amount of memory to reserve for every imageJ instance (defaults to 10000)
 #' @param max.cores numeric value, specifying the maximum number of cores to use for particle identification (defaults to # of machine cores - 1)
 #' @return saves the output of the ParticleAnalyzer function of ImageJ as a text file in the output directory and then assembles the data into a single database 
 #' called 'particle.RData'. This data.frame contains information about the following properties: the area (transversal cut), 
@@ -21,22 +21,26 @@
 #' @export 
 
 locate_and_measure_particles <- function(to.data, raw.video.folder, particle.data.folder, difference.lag, min_size=0, max_size=10000, 
-thresholds = c(10, 255), IJ.path, memory = 512, memory_per_identifier=10000, max.cores=0) {
-  #determing the number of processes that can be run in parallel
-  max.cores <- min(ifelse(max.cores==0, detectCores()-1, max.cores), detectCores()-1)
-  processes <- max(min(max.cores, memory %/% memory_per_identifier), 1)
+                                         thresholds = c(10, 255), IJ.path, memory = 512, memory.per.identifier=10000, max.cores=detectCores()-1) {
   
-  #Define location of video folder
+  #ijmacs.folder<-NULL
+  
+  #Define the video folder
   video.dir <- paste(to.data, raw.video.folder, sep = "")
   
-  ## create directory to store Particle Analyzer data
-  dir.create(paste0(to.data, particle.data.folder), showWarnings = FALSE)
+  ##Determine the maximum number of processess that can be run in parallel
+  #Filter the df to get a list of the videos that will be analyzed by this processor core
+  video.files.filt <- as.character(video.files.df[which(video.files.df$process==process_ID), "video.files"])
+  #Ensure that the assigned number of cores is not greater than the number of cores of the machine - 1
+  max.cores <- min(ifelse(max.cores==0, detectCores()-1, max.cores), detectCores()-1)
+  #Make sure enough memory (10000 Mb) is reserved for every parallel process
+  processes <- max(min(max.cores, memory %/% memory_per_identifier), 1)
+  #Ensure that every core needs to analyze at least 5 videos (otherwise parallellization does not yield enough time benefit)
+  video.files <- list.files(path = video.dir, pattern = paste("\\.", video.format, sep=""))
+  min(processes, floor(length(as.character(video.files.df[which(video.files.df$process==process_ID), "video.files"]))/5))
   
-  ##Parallellized steps for video analysis steps
-  ##If there can be only one process, use the original code
-  if(processes==1){
-    #ijmacs.folder<-NULL
-    
+  #In Windows, or if only limited computational power, use the unparallellized version of the analysis
+  if(.Platform$OS.type == "windows" | processes == 1) {
     ## copy master copy of ImageJ macro there for treatment
     ## if there is differencing (i.e., difference.lag>0)
     if(difference.lag>0)
@@ -61,19 +65,21 @@ thresholds = c(10, 255), IJ.path, memory = 512, memory_per_identifier=10000, max
       dir.create(paste0(to.data, ijmacs.folder), showWarnings = F)
       writeLines(text, con = paste0(to.data, ijmacs.folder, "Video_to_morphology_tmp.ijm"))}
     
-    #Call particle analyzer
+    ## create directory to store Particle Analyzer data
+    dir.create(paste0(to.data, particle.data.folder), showWarnings = FALSE)
+    
+    ## run to process video files by calling ImageJ
     if (.Platform$OS.type == "unix") 
       cmd <- paste0("java -Xmx", memory, "m -jar ", IJ.path, "/ij.jar", " -ijpath ", IJ.path, " -macro ","'", 
                     to.data, ijmacs.folder, "Video_to_morphology_tmp.ijm'")
     if (.Platform$OS.type == "windows")
       cmd <- paste0("\"", IJ.path,"\"", " -macro ","\"", paste0(gsub("/", "\\\\", paste0(to.data, ijmacs.folder))), "Video_to_morphology_tmp.ijm", "\"")
-    system(cmd)
-  } 
-  
-  #If more than one core is available, the following code will be run
-  else {
-    ##First get a list of all the video files
-    video.files <- list.files(path = video.dir, pattern = paste("\\.", video.format, sep=""))
+    
+    error.log <- system(cmd, intern = T)
+  } else {
+    #Otherwise, perform the parallellized analysis
+    
+    #Make a dataframe containing the full video files
     video.files <- paste(video.dir, video.files, sep="/")
     video.files.df <- as.data.frame(video.files)
     
@@ -81,12 +87,9 @@ thresholds = c(10, 255), IJ.path, memory = 512, memory_per_identifier=10000, max
     video.files.df$process <- ceiling(seq(from=0.001, to=processes, length=nrow(video.files.df)))
     
     #Run parallel processes for particle identification
-    mclapply(1:processes, parallel_locate_and_measure, to.data, raw.video.folder, particle.data.folder, difference.lag, min_size, max_size, 
-      thresholds, IJ.path, memory,  memory_per_identifier, video.files.df, video.dir, mc.cores = processes)
-   
-    
+    error.log <- mclapply(1:processes, parallel_locate_and_measure, to.data, raw.video.folder, particle.data.folder, difference.lag, min_size, max_size, 
+                          thresholds, IJ.path, memory,  memory_per_identifier, video.files.df, video.dir, mc.cores = processes)
   }
-  
   
   organise_particle_data(to.data, particle.data.folder)
   
