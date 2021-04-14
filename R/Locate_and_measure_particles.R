@@ -28,13 +28,11 @@ locate_and_measure_particles <- function(to.data, raw.video.folder, particle.dat
   #Define the video folder
   video.dir <- paste(to.data, raw.video.folder, sep = "")
   
-  ##Determine the maximum number of processess that can be run in parallel
+  ##Determine the maximum number of processes that can be run in parallel
   #List all video files
   video.files <- list.files(path = video.dir, pattern = paste("\\.", video.format, sep="")) #Make a dataframe containing the full video files
   video.files <- paste(video.dir, video.files, sep="/")
   video.files.df <- as.data.frame(video.files)
-  #Filter the df to get a list of the videos that will be analyzed by this processor core
-  video.files.filt <- as.character(video.files.df[which(video.files.df$process==process_ID), "video.files"])
   #Ensure that the assigned number of cores is not greater than the number of cores of the machine - 1
   max.cores <- min(ifelse(max.cores==0, detectCores()-1, max.cores), detectCores()-1)
   #Make sure enough memory (10000 Mb) is reserved for every parallel process
