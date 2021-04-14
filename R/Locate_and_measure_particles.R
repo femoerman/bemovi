@@ -88,7 +88,7 @@ locate_and_measure_particles <- function(to.data, raw.video.folder, particle.dat
     
     #Run parallel processes for particle identification
     error.log <- mclapply(1:processes, parallel_locate_and_measure, to.data, raw.video.folder, particle.data.folder, difference.lag, min_size, max_size, 
-                          thresholds, IJ.path, memory,  memory_per_identifier, video.files.df, video.dir, mc.cores = processes)
+                          thresholds, IJ.path, memory,  memory.per.identifier, video.files.df, video.dir, mc.cores = processes)
   }
   
   organise_particle_data(to.data, particle.data.folder)
