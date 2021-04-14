@@ -76,7 +76,7 @@ locate_and_measure_particles <- function(to.data, raw.video.folder, particle.dat
     if (.Platform$OS.type == "windows")
       cmd <- paste0("\"", IJ.path,"\"", " -macro ","\"", paste0(gsub("/", "\\\\", paste0(to.data, ijmacs.folder))), "Video_to_morphology_tmp.ijm", "\"")
     
-    error.log <- system(cmd, intern = T)
+    system(cmd)
   } else {
     #Otherwise, perform the parallellized analysis
     
@@ -84,7 +84,7 @@ locate_and_measure_particles <- function(to.data, raw.video.folder, particle.dat
     video.files.df$process <- ceiling(seq(from=0.001, to=processes, length=nrow(video.files.df)))
     
     #Run parallel processes for particle identification
-    error.log <- mclapply(1:processes, parallel_locate_and_measure, to.data, raw.video.folder, particle.data.folder, difference.lag, min_size, max_size, 
+     mclapply(1:processes, parallel_locate_and_measure, to.data, raw.video.folder, particle.data.folder, difference.lag, min_size, max_size, 
                           thresholds, IJ.path, memory,  memory.per.identifier, video.files.df, video.dir, mc.cores = processes)
   }
   

@@ -68,7 +68,7 @@ parallel_locate_and_measure <- function(process_ID, to.data, raw.video.folder, p
   if (.Platform$OS.type == "unix") {
     cmd <- paste0("java -Xmx", memory, "m -jar ", IJ.temp, "/ij.jar", " -ijpath ", IJ.temp, " -macro ","'", 
                   ijmacs.file, "'")}
-  error.log <- system(cmd, intern = T)
+  system(cmd)
   
   #Move videos back to original folder and delete temporary folder
   temp.files <- list.files(path = temp.dir, pattern = paste("\\.", video.format, sep=""))
@@ -77,8 +77,6 @@ parallel_locate_and_measure <- function(process_ID, to.data, raw.video.folder, p
     system(paste("mv -t", video.dir, paste(unlist(temp.files), collapse=' ')))
     system(paste("rm -r ", temp.dir))
   }
-  
-  return(error.log)
 }
     
   
