@@ -15,7 +15,6 @@
 #' @param thresholds vector containing the min and max threshold values (defaults to c(10,255))
 #' @param IJ.path path to ImageJ folder, containing the 'ij.jar' executable
 #' @param memory numeric value specifying the amount of memory available to ImageJ (defaults to 512)
-#' @param memory.per.identifier numeric value specifying the amount of memory to reserve for every imageJ instance (defaults to 30000)
 #' @param video.files.df Dataframe containing the video files in the raw data, as well as the process ID for the parallel analysis
 #' @param video.dir Folder containing all video files
 #' @return saves the output of the ParticleAnalyzer function of ImageJ as a text file in the output directory and then assembles the data into a single database 
@@ -26,7 +25,7 @@
 #' @export 
 
 parallel_locate_and_measure <- function(process_ID, to.data, raw.video.folder, particle.data.folder, difference.lag, min_size, max_size, 
-                                        thresholds, IJ.path, memory, memory.per.identifier, 
+                                        thresholds, IJ.path, memory, 
                                         video.files.df, video.dir){
   
   #Filter the df to get a list of the videos that will be analyzed by this processor core
