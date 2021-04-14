@@ -36,7 +36,7 @@ locate_and_measure_particles <- function(to.data, raw.video.folder, particle.dat
   #Ensure that the assigned number of cores is not greater than the number of cores of the machine - 1
   max.cores <- min(ifelse(max.cores==0, detectCores()-1, max.cores), detectCores()-1)
   #Make sure enough memory (10000 Mb) is reserved for every parallel process
-  processes <- max(min(max.cores, memory %/% memory_per_identifier), 1)
+  processes <- max(min(max.cores, memory %/% memory.per.identifier), 1)
   #Ensure that every core needs to analyze at least 5 videos (otherwise parallellization does not yield enough time benefit)
   min(processes, floor(length(video.files)/5))
   
