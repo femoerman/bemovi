@@ -38,7 +38,7 @@ create_overlays_parallel <- function(process_ID, video.files.df, traj.data, to.d
   
   ## change path for output
   dir.create(paste0(to.data, temp.overlay.folder), showWarnings = F)
-  folder.loc <- paste0(to.data, temp.overlay.folder "/")
+  folder.loc <- paste0(to.data, temp.overlay.folder, "/")
   for (i in 1:length(file_names)) {
     dir.create(paste0(folder.loc, file_names[i]), showWarnings = F)
     traj.data_tmp <- subset(traj.data, file == file_names[i])
