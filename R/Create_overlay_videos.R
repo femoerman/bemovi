@@ -25,7 +25,13 @@
 
 create_overlays <- function(traj.data, to.data, merged.data.folder, raw.video.folder, temp.overlay.folder, overlay.folder, 
                             width, height, difference.lag, type = "traj",  predict_spec=F, contrast.enhancement = 0, IJ.path, memory = 512,
-                            max.cores=detectCores()-1, memory.per.overlay=30000) {
+                            max.cores=detectCores()-1, memory.per.overlay=30000) {$
+    
+    
+    #traj.data<-trajectory<-ijmacs.folder<-NULL
+    
+    video.dir <- paste(to.data, raw.video.folder, sep = "")  
+  
   #List all video files
   video.files <- list.files(path = video.dir, pattern = paste("\\.", video.format, sep="")) #Make a dataframe containing the full video files
   video.files <- paste(video.dir, video.files, sep="/")
@@ -38,10 +44,6 @@ create_overlays <- function(traj.data, to.data, merged.data.folder, raw.video.fo
   processes <- max(min(max.cores, memory %/% memory.per.overlay), 1)
   #Ensure that there are at least 5 videos per core assigned
   processes <- min(processes, ceiling(length(video.files)/5))
-  
-  #traj.data<-trajectory<-ijmacs.folder<-NULL
-  
-  video.dir <- paste(to.data, raw.video.folder, sep = "")
   
   load(file = paste(to.data,merged.data.folder, "Master.RData", sep = "/")) 
   file_names <- unique(traj.data$file)
