@@ -39,17 +39,10 @@ create_overlays_parallel <- function(process_ID, video.files.df, traj.data, to.d
   #Make a temporary folder and move the videos there
   temp.dir <- paste0(video.dir, process_ID, sep="/")
   dir.create(temp.dir, showWarnings = F)
-  if (.Platform$OS.type == "windows") {
-    for (file in video.files.filt){
-      system(paste("move", file, temp.dir))
-    }
-  }
   
   if (.Platform$OS.type == "unix") {
     system(paste("mv -t", temp.dir, paste(unlist(video.files.filt), collapse=' ')))
   }
-  
-  
   
   ## change path for output
   dir.create(paste0(to.data, temp.overlay.folder), showWarnings = F)
@@ -144,8 +137,6 @@ create_overlays_parallel <- function(process_ID, video.files.df, traj.data, to.d
   }
   
   ## copy master copy of ImageJ macro there for treatment
-  if (.Platform$OS.type == "windows") 
-    text <- readLines(paste0(system.file(package="bemovi"), "/","ImageJ_macros/Video_overlay.ijm"),warn = FALSE)
   if (.Platform$OS.type == "unix") 
     text <- readLines(paste0(system.file(package="bemovi"), "/","ImageJ_macros/Video_overlay.ijm"))
   
@@ -157,8 +148,6 @@ create_overlays_parallel <- function(process_ID, video.files.df, traj.data, to.d
   if (predict_spec==T){text[grep("RGB Color", text)] <- paste('run(\"RGB Color\");')}
   
   ## re-create ImageJ macro for batch processing of video files with ParticleTracker
-  if (.Platform$OS.type == "windows") 
-    writeLines(text, con = paste(to.data, ijmacs.folder, "Video_overlay_tmp.ijm", sep = ""))
   if (.Platform$OS.type == "unix") {
     # ijmacs.folder1 <- sub(raw.video.folder, ijmacs.folder, video.dir)
     writeLines(text, con = paste(to.data, ijmacs.folder, "/Video_overlay_tmp.ijm", sep = ""))
@@ -172,9 +161,6 @@ create_overlays_parallel <- function(process_ID, video.files.df, traj.data, to.d
   ij.temp <- paste0(to.data, "tempij/", process_ID, "/")
   
   ##Create a temporary ImageJ copy
-  if (.Platform$OS.type == "windows") {
-    system(paste("Xcopy /E /I ", IJ.path, " ", ij.temp, sep=""))}
-  
   if (.Platform$OS.type == "unix") {
     system(paste("cp -R ", IJ.path, " ", ij.temp, sep=""))}
   
@@ -183,9 +169,6 @@ create_overlays_parallel <- function(process_ID, video.files.df, traj.data, to.d
   if (.Platform$OS.type == "unix") 
     cmd <- paste0("java -Xmx", memory, "m -jar ", ij.temp, "/ij.jar", " -ijpath ", ij.temp, " -macro ", 
                   paste0("'", paste0(to.data, ijmacs.folder), "Video_overlay_tmp", process_ID, ".ijm", "'"))
-  
-  if (.Platform$OS.type == "windows") 
-    cmd <- paste0("\"", ij.temp, "\""," -macro ","\"", paste0(gsub("/", "\\\\", paste0(to.data, ijmacs.folder))), "Video_overlay_tmp", process_ID, ".ijm", "\"")
   
   ## run ImageJ macro
   system(cmd)
@@ -198,13 +181,5 @@ create_overlays_parallel <- function(process_ID, video.files.df, traj.data, to.d
     system(paste("rm -r ", temp.dir))
     system(paste("rm -r ", paste0(to.data, "tempij/")))
   }
-  
-  if (.Platform$OS.type == "windows"){
-    for (file in temp.files){
-      system(paste("move", file, video.dir))
-    }
-    system(paste("rmdir", temp.dir, "/s /q"))
-    system(paste("rmdir", paste0(to.data, "tempij/"), "/s /q"))}
-  
 }
   
