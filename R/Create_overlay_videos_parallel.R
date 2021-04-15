@@ -152,7 +152,7 @@ create_overlays_parallel <- function(process_ID, video.files.df, traj.data, to.d
   ## re-create ImageJ macro for batch processing of video files with ParticleTracker
   if (.Platform$OS.type == "unix") {
     # ijmacs.folder1 <- sub(raw.video.folder, ijmacs.folder, video.dir)
-    writeLines(text, con = paste(to.data, ijmacs.folder, "/Video_overlay_tmp.ijm", sep = ""))
+    writeLines(text, con = paste(to.data, ijmacs.folder, "Video_overlay_tmp", process_ID, ".ijm", sep = ""))
   }
   
   ## create directory to store overlays
