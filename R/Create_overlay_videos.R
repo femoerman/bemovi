@@ -19,13 +19,13 @@
 #' @param contrast.enhancement numeric value to increase the contrast of the original video
 #' @param IJ.path path to ImageJ folder, containing the 'ij.jar' executable
 #' @param memory numeric value specifying the amount of memory available to ImageJ (defaults to 512)
-#' @param memory.per.overlay Numeric value, specifiying the amount of memory to be reserved for each overlay process. Defaults to 30000
+#' @param memory.per.overlay Numeric value, specifiying the amount of memory to be reserved for each overlay process. Defaults to 5000
 #' @param max.cores Max number of cores that can be used for overlay making. Defaults to number of machine cores -1
 #' @export
 
 create_overlays <- function(traj.data, to.data, merged.data.folder, raw.video.folder, temp.overlay.folder, overlay.folder, 
                             width, height, difference.lag, type = "traj",  predict_spec=F, contrast.enhancement = 0, IJ.path, memory = 512,
-                            max.cores=detectCores()-1, memory.per.overlay=30000) {
+                            max.cores=detectCores()-1, memory.per.overlay=5000) {
     
     
   #traj.data<-trajectory<-ijmacs.folder<-NULL
