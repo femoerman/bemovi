@@ -28,9 +28,9 @@ create_overlays <- function(traj.data, to.data, merged.data.folder, raw.video.fo
                             max.cores=detectCores()-1, memory.per.overlay=30000) {$
     
     
-    #traj.data<-trajectory<-ijmacs.folder<-NULL
+  #traj.data<-trajectory<-ijmacs.folder<-NULL
     
-    video.dir <- paste(to.data, raw.video.folder, sep = "")  
+  video.dir <- paste(to.data, raw.video.folder, sep = "/")  
   
   #List all video files
   video.files <- list.files(path = video.dir, pattern = paste("\\.", video.format, sep="")) #Make a dataframe containing the full video files
