@@ -23,11 +23,11 @@
 #' @export
 
 create_overlays_parallel <- function(process_ID, video.files.df, traj.data, to.data, merged.data.folder, raw.video.folder, temp.overlay.folder, overlay.folder, 
-                            width, height, difference.lag, type = "traj",  predict_spec=F, contrast.enhancement = 0, IJ.path, memory = 512) {
+                                     width, height, difference.lag, type = "traj",  predict_spec=F, contrast.enhancement = 0, IJ.path, memory = 512) {
   
   ##Define folder with video files
   video.dir <- paste(to.data, raw.video.folder, sep="/")
-    
+  
   #Filter the df to get a list of the videos that will be analyzed by this processor core
   video.files.filt <- as.character(video.files.df[which(video.files.df$process==process_ID), "video.files"])
   videos <- unlist(strsplit(video.files.filt, split = "/"))
@@ -142,9 +142,17 @@ create_overlays_parallel <- function(process_ID, video.files.df, traj.data, to.d
   if (.Platform$OS.type == "unix") 
     text <- readLines(paste0(system.file(package="bemovi"), "/","ImageJ_macros/Video_overlay.ijm"))
   
+  
+  ## create directory to store overlays
+  dir.create(paste0(to.data, overlay.folder), showWarnings = F)
+  
+  #Create subfolder for video output
+  subfolder.output <- paste0(to.data, overlay.folder, "/", process_ID)
+  dir.create(subfolder.output, showWarnings = F)
+  
   text[grep("video_input = ", text)] <- paste("video_input = ", "'", temp.dir, "';", sep = "")
   text[grep("overlay_input = ", text)] <- paste("overlay_input = ", "'", folder.loc, "';", sep = "")
-  text[grep("overlay_output = ", text)] <- paste("overlay_output = ", "'", paste0(to.data, overlay.folder), "';", sep = "")
+  text[grep("overlay_output = ", text)] <- paste("overlay_output = ", "'", subfolder.output, "';", sep = "")
   text[grep("lag =", text)] <- paste("lag = ", difference.lag, ";", sep = "") 
   text[grep("Enhance Contrast", text)] <- paste("run(\"Enhance Contrast...\", \"saturated=", contrast.enhancement, " process_all\");", sep = "")
   if (predict_spec==T){text[grep("RGB Color", text)] <- paste('run(\"RGB Color\");')}
@@ -155,9 +163,6 @@ create_overlays_parallel <- function(process_ID, video.files.df, traj.data, to.d
     writeLines(text, con = paste(to.data, ijmacs.folder, "Video_overlay_tmp", process_ID, ".ijm", sep = ""))
   }
   
-  ## create directory to store overlays
-  dir.create(paste0(to.data, overlay.folder), showWarnings = F)
-  
   ##create folder for temporary ij folder
   dir.create(paste0(to.data, "tempij/"), showWarnings = F)
   ij.temp <- paste0(to.data, "tempij/", process_ID, "/")
@@ -167,7 +172,7 @@ create_overlays_parallel <- function(process_ID, video.files.df, traj.data, to.d
     system(paste("cp -R ", IJ.path, " ", ij.temp, sep=""))}
   
   ## call IJ macro to merge original video with the trajectory data
-
+  
   if (.Platform$OS.type == "unix") 
     cmd <- paste0("java -Xmx", memory, "m -jar ", ij.temp, "/ij.jar", " -ijpath ", ij.temp, " -macro ", 
                   paste0("'", paste0(to.data, ijmacs.folder), "Video_overlay_tmp", process_ID, ".ijm", "'"))
@@ -184,4 +189,3 @@ create_overlays_parallel <- function(process_ID, video.files.df, traj.data, to.d
     system(paste("rm -r ", paste0(to.data, "tempij/", process_ID)))
   }
 }
-  
