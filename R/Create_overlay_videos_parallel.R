@@ -181,7 +181,7 @@ create_overlays_parallel <- function(process_ID, video.files.df, traj.data, to.d
   if (.Platform$OS.type == "unix") {
     system(paste("mv -t", video.dir, paste(unlist(temp.files), collapse=' ')))
     system(paste("rm -r ", temp.dir))
-    system(paste("rm -r ", paste0(to.data, "tempij/")))
+    system(paste("rm -r ", paste0(to.data, "tempij/", process_ID)))
   }
 }
   
