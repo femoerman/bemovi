@@ -46,14 +46,16 @@ create_overlays_parallel <- function(process_ID, video.files.df, traj.data, to.d
   
   ## change path for output
   dir.create(paste0(to.data, temp.overlay.folder), showWarnings = F)
+  dir.create(paste0(to.data, temp.overlay.folder, "/", process_ID), showWarnings = F)
+  folder.loc <- paste0(to.data, temp.overlay.folder, "/", process_ID, "/")
   for (i in 1:length(file_names)) {
-    dir.create(paste0(to.data, temp.overlay.folder, file_names[i]), showWarnings = F)
+    dir.create(paste0(folder.loc, file_names[i]), showWarnings = F)
     traj.data_tmp <- subset(traj.data, file == file_names[i])
     j <- 1
     
     if (type == "traj") {
       while (j <= max(traj.data$frame)) {
-        jpeg(paste(to.data, temp.overlay.folder, file_names[i], "/", "frame_", j, ".jpg", sep = ""), width = as.numeric(width), height = as.numeric(height), quality = 100)
+        jpeg(paste(folder.loc, file_names[i], "/", "frame_", j, ".jpg", sep = ""), width = as.numeric(width), height = as.numeric(height), quality = 100)
         par(mar = rep(0, 4), xaxs = c("i"), yaxs = c("i"))
         
         if (predict_spec==F){
@@ -93,7 +95,7 @@ create_overlays_parallel <- function(process_ID, video.files.df, traj.data, to.d
     
     if (type == "label") {
       while (j <= max(traj.data$frame)) {
-        jpeg(paste(to.data, temp.overlay.folder, file_names[i], "/", "frame_", 
+        jpeg(paste(folder.loc, file_names[i], "/", "frame_", 
                    j, ".jpg", sep = ""), width = as.numeric(width), height = as.numeric(height), quality = 100)
         par(mar = rep(0, 4), xaxs = c("i"), yaxs = c("i"))
         
@@ -140,8 +142,8 @@ create_overlays_parallel <- function(process_ID, video.files.df, traj.data, to.d
   if (.Platform$OS.type == "unix") 
     text <- readLines(paste0(system.file(package="bemovi"), "/","ImageJ_macros/Video_overlay.ijm"))
   
-  text[grep("video_input = ", text)] <- paste("video_input = ", "'", paste0(to.data, raw.video.folder), "';", sep = "")
-  text[grep("overlay_input = ", text)] <- paste("overlay_input = ", "'", paste0(to.data, temp.overlay.folder), "';", sep = "")
+  text[grep("video_input = ", text)] <- paste("video_input = ", "'", temp.dir, "';", sep = "")
+  text[grep("overlay_input = ", text)] <- paste("overlay_input = ", "'", folder.loc, "';", sep = "")
   text[grep("overlay_output = ", text)] <- paste("overlay_output = ", "'", paste0(to.data, overlay.folder), "';", sep = "")
   text[grep("lag =", text)] <- paste("lag = ", difference.lag, ";", sep = "") 
   text[grep("Enhance Contrast", text)] <- paste("run(\"Enhance Contrast...\", \"saturated=", contrast.enhancement, " process_all\");", sep = "")
