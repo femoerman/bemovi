@@ -17,15 +17,15 @@
 #' @export
 
 calculate_mvt <- function(data,to.data,trajectory.data.folder,pixel_to_scale,fps){
-
+  
   #trajectory<-X<-Y<-frame_<-step_speed<-gross_disp<-net_disp<-abs_angle<-rel_angle<-NULL
   
   if(!exists("fps")) stop("No fps information provided. Please specify path in global options.")
   if(!exists("pixel_to_scale")) stop("No pixel to real scale conversion provided. Please specify path in global options.")
-
+  
   # output path
   out.dir <- paste0(to.data,trajectory.data.folder)
-
+  
   # create unique ID consisting of trajectory ID and file
   id <- paste(data$file,data$trajectory,sep="-")
   data <- as.data.table(cbind(data,id))
@@ -33,7 +33,7 @@ calculate_mvt <- function(data,to.data,trajectory.data.folder,pixel_to_scale,fps
   
   # keep a copy of the original data for left join later, but drop redundant columns
   data_full <- data
-
+  
   #order dataframe
   setkey(data, file, trajectory, frame)
   
@@ -43,33 +43,31 @@ calculate_mvt <- function(data,to.data,trajectory.data.folder,pixel_to_scale,fps
   #filter out duplicate positions, if available
   #data <- data[data[,!(c(diff(X) == 0, F) & c(diff(Y) == 0, F))]]
   data <- data[data[,!(c(diff(X) == 0, F) & c(diff(Y) == 0, F)), by = id]$V1]
-
+  
   #subset dataset to only include relevant movement information
   data <- data[,list(file,X,Y,frame,id,trajectory)]
   
   #rename frame column to avoid clashes with frame() function
   setnames(data, c("file","X","Y","frame","id","trajectory"), c("file","X","Y","frame_","id","trajectory"))
-
+  
   # convert to real dimensions
   data$X <- data$X * pixel_to_scale
   data$Y <- data$Y * pixel_to_scale
   
   data$frame_ <- data$frame
   mvt_summary <- data[,list(frame=frame_,
-                         step_length = round(step_length(X,Y),2),
-                         step_duration = step_duration(frame_)/fps,
-                         step_speed = round(step_length(X,Y)/(step_duration(frame_)/fps),2),
-                         gross_disp = round(cumsum(step_length(X,Y)),2),
-                         net_disp = round(net_displacement(X,Y),0),
-                         abs_angle = round(anglefun(diff(X),diff(Y)),2),
-                         rel_angle = round(rel.angle(anglefun(diff(X),diff(Y))),2)), by=id]
-
+                            step_length = round(step_length(X,Y),2),
+                            step_duration = step_duration(frame_)/fps,
+                            step_speed = round(step_length(X,Y)/(step_duration(frame_)/fps),2),
+                            gross_disp = round(cumsum(step_length(X,Y)),2),
+                            net_disp = round(net_displacement(X,Y),0),
+                            abs_angle = round(anglefun(diff(X),diff(Y)),2),
+                            rel_angle = round(rel.angle(anglefun(diff(X),diff(Y))),2)), by=id]
+  
   mvt_summary <- mvt_summary[ , list(id, frame, step_length, step_duration, step_speed, gross_disp, net_disp, abs_angle, rel_angle)]
-
+  
   trajectory.data <- merge(data_full,mvt_summary,by=c("id","frame"), all.x=T)
-
+  
   save(trajectory.data, file = paste0(out.dir,"trajectory.RData"))
-
+  
 }
-
-

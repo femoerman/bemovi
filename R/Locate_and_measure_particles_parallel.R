@@ -1,4 +1,4 @@
-#' Function to extract morphological measurements and X- and Y-coordinates for moving particles, in a wrapper for parallellized analyses
+#' Function to extract morphological measurements and X- and Y-coordinates for moving particles, in a wrapper for parallelized analyses
 #' 
 #' Function calls ImageJ software and its ParticleAnalyzer function to extract for each frame of the video
 #' several morphological descriptors and the X- and Y-coordinates of all moving particles. All videos in the raw.video.folder are analyses, separately.

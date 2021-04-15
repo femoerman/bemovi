@@ -19,168 +19,173 @@
 #' @param contrast.enhancement numeric value to increase the contrast of the original video
 #' @param IJ.path path to ImageJ folder, containing the 'ij.jar' executable
 #' @param memory numeric value specifying the amount of memory available to ImageJ (defaults to 512)
+#' @param memory.per.overlay Numeric value, specifiying the amount of memory to be reserved for each overlay process. Defaults to 30000
+#' @param max.cores Max number of cores that can be used for overlay making. Defaults to number of machine cores -1
 #' @export
 
 create_overlays <- function(traj.data, to.data, merged.data.folder, raw.video.folder, temp.overlay.folder, overlay.folder, 
-                                  width, height, difference.lag, type = "traj",  predict_spec=F, contrast.enhancement = 0, IJ.path, 
-                            memory = 512, max.cores=0, memory_per_overlay=30000) {
+                            width, height, difference.lag, type = "traj",  predict_spec=F, contrast.enhancement = 0, IJ.path, memory = 512,
+                            max.cores=detectCores()-1, memory.per.overlay=30000) {
+  #List all video files
+  video.files <- list.files(path = video.dir, pattern = paste("\\.", video.format, sep="")) #Make a dataframe containing the full video files
+  video.files <- paste(video.dir, video.files, sep="/")
+  video.files.df <- as.data.frame(video.files)
   
-  #determing the number of processes that can be run in parallel
-  max.cores <- min(ifelse(max.cores==0, detectCores()-1, max.cores), detectCores()-1)
-  processes <- max(min(max.cores, memory %/% memory_per_overlay), 1)
+  ##determine the number of processes that can be run in parallel
+  #Verify that the specified number of cores doesn't exceed the number of machine cores - 1
+  max.cores <- min(max.cores, detectCores()-1)
+  #limit processes by the available machine memory and memory per overlay process
+  processes <- max(min(max.cores, memory %/% memory.per.overlay), 1)
+  #Ensure that there are at least 5 videos per core assigned
+  processes <- min(processes, ceiling(length(video.files)/5))
   
-  #Define location of video folder
+  #traj.data<-trajectory<-ijmacs.folder<-NULL
+  
   video.dir <- paste(to.data, raw.video.folder, sep = "")
   
-  load(file = paste(to.data,merged.data.folder, "Master.RData", sep = "/"))
+  load(file = paste(to.data,merged.data.folder, "Master.RData", sep = "/")) 
   file_names <- unique(traj.data$file)
   
-  if(processes==1){
-  ## change path for output
-  dir.create(paste0(to.data, temp.overlay.folder), showWarnings = F)
+  #If only one process can be run at a time, or it is a wondows machine, use the original overlay process
+  if (.Platform$OS.type == "windows" | processes == 1)
+  {
+    ## change path for output
+    dir.create(paste0(to.data, temp.overlay.folder), showWarnings = F)
     for (i in 1:length(file_names)) {
-    dir.create(paste0(to.data, temp.overlay.folder, file_names[i]), showWarnings = F)
-    traj.data_tmp <- subset(traj.data, file == file_names[i])
-    j <- 1
-    
-    if (type == "traj") {
-      while (j <= max(traj.data$frame)) {
-        jpeg(paste(to.data, temp.overlay.folder, file_names[i], "/", "frame_", j, ".jpg", sep = ""), width = as.numeric(width), height = as.numeric(height), quality = 100)
-        par(mar = rep(0, 4), xaxs = c("i"), yaxs = c("i"))
-        
-        if (predict_spec==F){
-        
-        print <- subset(traj.data_tmp, traj.data_tmp$frame <= j, select = c("X", "Y", "trajectory"))
-        
-        ## plot the particle(s) so long as there are some
-        if (length(print[, 1]) != 0) {
-          plot(print$X, print$Y, xlim = c(0, as.numeric(width)), ylim = c(as.numeric(height), 0), col = "blue", pch = 15, cex = 1, asp = 1)
-        }
-        
-        ## otherwise just plot the empty frame
-        if (length(print[, 1]) == 0) {
-          plot(NA, NA, xlim = c(0, as.numeric(width)), ylim = c(as.numeric(height), 0), col = "blue", pch = 1, cex = 6, asp = 1)
-        }
-        }
-        
-        if (predict_spec==T){
+      dir.create(paste0(to.data, temp.overlay.folder, file_names[i]), showWarnings = F)
+      traj.data_tmp <- subset(traj.data, file == file_names[i])
+      j <- 1
+      
+      if (type == "traj") {
+        while (j <= max(traj.data$frame)) {
+          jpeg(paste(to.data, temp.overlay.folder, file_names[i], "/", "frame_", j, ".jpg", sep = ""), width = as.numeric(width), height = as.numeric(height), quality = 100)
+          par(mar = rep(0, 4), xaxs = c("i"), yaxs = c("i"))
           
-          print <- subset(traj.data_tmp,traj.data_tmp$frame <= j, select=c("X","Y","trajectory","predict_spec"))
-          
-          ## plot the particle(s) so long as there are some
-          if (length(print[, 1]) != 0) {
-            plot(print$X, print$Y, xlim=c(0, as.numeric(width)), ylim=c(as.numeric(height), 0),  col=as.factor(print$predict_spec), pch=15, cex=1, asp=1)
-          }
-          
-          ## otherwise just plot the empty frame
-          if (length(print[, 1]) == 0) {
-            plot(NA, NA, xlim = c(0, as.numeric(width)), ylim = c(as.numeric(height), 0), col = "blue", pch = 1, cex = 1, asp = 1)
-          }
-        }
-        
-        dev.off()
-        j <- j + 1
-      }
-    }
-    
-    if (type == "label") {
-      while (j <= max(traj.data$frame)) {
-        jpeg(paste(to.data, temp.overlay.folder, file_names[i], "/", "frame_", 
-                   j, ".jpg", sep = ""), width = as.numeric(width), height = as.numeric(height), quality = 100)
-        par(mar = rep(0, 4), xaxs = c("i"), yaxs = c("i"))
-        
-        if (predict_spec==F){
-        
-        print <- subset(traj.data_tmp, traj.data_tmp$frame == j, select = c("X", "Y", "trajectory"))
-        
-        ## plot the particle(s) so long as there are some
-        if (length(print[, trajectory, ]) != 0) {
-          plot(print$X, print$Y, xlim = c(0, as.numeric(width)), ylim = c(as.numeric(height), 0), col = "blue", pch = 1, cex = 6, asp = 1)
-          text(print$X, print$Y - 20, print$trajectory, cex = 2, col = "red")
-        }
-        
-        ## otherwise just plot the empty frame
-        if (length(print[, trajectory,]) == 0) {
-          plot(NA, NA, xlim = c(0, as.numeric(width)), ylim = c(as.numeric(height), 0), col = "blue", pch = 1, cex = 6, asp = 1)
-        }
-        }
-        
-        if (predict_spec==T){
-          
-          print <- subset(traj.data_tmp,traj.data_tmp$frame == j, select=c("X","Y","trajectory","predict_spec"))
-                    
-          ## plot the particle(s) so long as there are some
-          if (length(print[, trajectory, ]) != 0) {
-            plot(print$X, print$Y, xlim=c(0,as.numeric(width)), ylim=c(as.numeric(height), 0), col=as.factor(print$predict_spec), pch=1, cex=6, asp=1)
-            text(print$X, print$Y-20,print$trajectory,cex=2,col=as.numeric(print$predict_spec))
+          if (predict_spec==F){
+            
+            print <- subset(traj.data_tmp, traj.data_tmp$frame <= j, select = c("X", "Y", "trajectory"))
+            
+            ## plot the particle(s) so long as there are some
+            if (length(print[, X]) != 0) {
+              plot(print$X, print$Y, xlim = c(0, as.numeric(width)), ylim = c(as.numeric(height), 0), col = "blue", pch = 15, cex = 1, asp = 1)
             }
-          
-          ## otherwise just plot the empty frame
-          if (length(print[, trajectory, ]) == 0) {
-            plot(NA, NA, xlim = c(0, as.numeric(width)), ylim = c(as.numeric(height), 0), col = "blue", pch = 1, 
-                 cex = 6, asp = 1)
+            
+            ## otherwise just plot the empty frame
+            if (length(print[, X]) == 0) {
+              plot(NA, NA, xlim = c(0, as.numeric(width)), ylim = c(as.numeric(height), 0), col = "blue", pch = 1, cex = 6, asp = 1)
+            }
           }
+          
+          if (predict_spec==T){
+            
+            print <- subset(traj.data_tmp,traj.data_tmp$frame <= j, select=c("X","Y","trajectory","predict_spec"))
+            
+            ## plot the particle(s) so long as there are some
+            if (length(print[, X]) != 0) {
+              plot(print$X, print$Y, xlim=c(0, as.numeric(width)), ylim=c(as.numeric(height), 0),  col=as.factor(print$predict_spec), pch=15, cex=1, asp=1)
+            }
+            
+            ## otherwise just plot the empty frame
+            if (length(print[, X]) == 0) {
+              plot(NA, NA, xlim = c(0, as.numeric(width)), ylim = c(as.numeric(height), 0), col = "blue", pch = 1, cex = 1, asp = 1)
+            }
+          }
+          
+          dev.off()
+          j <- j + 1
         }
-        
-        dev.off()
-        j <- j + 1
+      }
+      
+      if (type == "label") {
+        while (j <= max(traj.data$frame)) {
+          jpeg(paste(to.data, temp.overlay.folder, file_names[i], "/", "frame_", 
+                     j, ".jpg", sep = ""), width = as.numeric(width), height = as.numeric(height), quality = 100)
+          par(mar = rep(0, 4), xaxs = c("i"), yaxs = c("i"))
+          
+          if (predict_spec==F){
+            
+            print <- subset(traj.data_tmp, traj.data_tmp$frame == j, select = c("X", "Y", "trajectory"))
+            
+            ## plot the particle(s) so long as there are some
+            if (length(print[, X, ]) != 0) {
+              plot(print$X, print$Y, xlim = c(0, as.numeric(width)), ylim = c(as.numeric(height), 0), col = "blue", pch = 1, cex = 6, asp = 1)
+              text(print$X, print$Y - 20, print$trajectory, cex = 2, col = "red")
+            }
+            
+            ## otherwise just plot the empty frame
+            if (length(print[, X,]) == 0) {
+              plot(NA, NA, xlim = c(0, as.numeric(width)), ylim = c(as.numeric(height), 0), col = "blue", pch = 1, cex = 6, asp = 1)
+            }
+          }
+          
+          if (predict_spec==T){
+            
+            print <- subset(traj.data_tmp,traj.data_tmp$frame == j, select=c("X","Y","trajectory","predict_spec"))
+            
+            ## plot the particle(s) so long as there are some
+            if (length(print[, X, ]) != 0) {
+              plot(print$X, print$Y, xlim=c(0,as.numeric(width)), ylim=c(as.numeric(height), 0), col=as.factor(print$predict_spec), pch=1, cex=6, asp=1)
+              text(print$X, print$Y-20,print$trajectory,cex=2,col=as.numeric(print$predict_spec))
+            }
+            
+            ## otherwise just plot the empty frame
+            if (length(print[, X, ]) == 0) {
+              plot(NA, NA, xlim = c(0, as.numeric(width)), ylim = c(as.numeric(height), 0), col = "blue", pch = 1, 
+                   cex = 6, asp = 1)
+            }
+          }
+          
+          dev.off()
+          j <- j + 1
+        }
       }
     }
-  }
-  
-  ## copy master copy of ImageJ macro there for treatment
-  if (.Platform$OS.type == "windows") 
-    text <- readLines(paste0(system.file(package="bemovi"), "/","ImageJ_macros/Video_overlay.ijm"),warn = FALSE)
-  if (.Platform$OS.type == "unix") 
-    text <- readLines(paste0(system.file(package="bemovi"), "/","ImageJ_macros/Video_overlay.ijm"))
-  
-  text[grep("video_input = ", text)] <- paste("video_input = ", "'", paste0(to.data, raw.video.folder), "';", sep = "")
-  text[grep("overlay_input = ", text)] <- paste("overlay_input = ", "'", paste0(to.data, temp.overlay.folder), "';", sep = "")
-  text[grep("overlay_output = ", text)] <- paste("overlay_output = ", "'", paste0(to.data, overlay.folder), "';", sep = "")
-  text[grep("lag =", text)] <- paste("lag = ", difference.lag, ";", sep = "") 
-  text[grep("Enhance Contrast", text)] <- paste("run(\"Enhance Contrast...\", \"saturated=", contrast.enhancement, " process_all\");", sep = "")
-  if (predict_spec==T){text[grep("RGB Color", text)] <- paste('run(\"RGB Color\");')}
-
+    
+    ## copy master copy of ImageJ macro there for treatment
+    if (.Platform$OS.type == "windows") 
+      text <- readLines(paste0(system.file(package="bemovi"), "/","ImageJ_macros/Video_overlay.ijm"),warn = FALSE)
+    if (.Platform$OS.type == "unix") 
+      text <- readLines(paste0(system.file(package="bemovi"), "/","ImageJ_macros/Video_overlay.ijm"))
+    
+    text[grep("video_input = ", text)] <- paste("video_input = ", "'", paste0(to.data, raw.video.folder), "';", sep = "")
+    text[grep("overlay_input = ", text)] <- paste("overlay_input = ", "'", paste0(to.data, temp.overlay.folder), "';", sep = "")
+    text[grep("overlay_output = ", text)] <- paste("overlay_output = ", "'", paste0(to.data, overlay.folder), "';", sep = "")
+    text[grep("lag =", text)] <- paste("lag = ", difference.lag, ";", sep = "") 
+    text[grep("Enhance Contrast", text)] <- paste("run(\"Enhance Contrast...\", \"saturated=", contrast.enhancement, " process_all\");", sep = "")
+    if (predict_spec==T){text[grep("RGB Color", text)] <- paste('run(\"RGB Color\");')}
+    
     ## re-create ImageJ macro for batch processing of video files with ParticleTracker
-  if (.Platform$OS.type == "windows") 
-    writeLines(text, con = paste(to.data, ijmacs.folder, "Video_overlay_tmp.ijm", sep = ""))
-  if (.Platform$OS.type == "unix") {
-   # ijmacs.folder1 <- sub(raw.video.folder, ijmacs.folder, video.dir)
-    writeLines(text, con = paste(to.data, ijmacs.folder, "/Video_overlay_tmp.ijm", sep = ""))
-  }
-  
-  ## create directory to store overlays
-  dir.create(paste0(to.data, overlay.folder), showWarnings = F)
-  
-  ## call IJ macro to merge original video with the trajectory data
-  if (.Platform$OS.type == "unix") 
-    cmd <- paste0("java -Xmx", memory, "m -jar ", IJ.path, "/ij.jar", " -ijpath ", IJ.path, " -macro ", 
-                  paste0("'", paste0(to.data, ijmacs.folder), "Video_overlay_tmp.ijm", "'"))
-  
-  if (.Platform$OS.type == "windows") 
-    cmd <- paste0("\"", IJ.path, "\""," -macro ","\"", paste0(gsub("/", "\\\\", paste0(to.data, ijmacs.folder))), "Video_overlay_tmp.ijm", "\"")
+    if (.Platform$OS.type == "windows") 
+      writeLines(text, con = paste(to.data, ijmacs.folder, "Video_overlay_tmp.ijm", sep = ""))
+    if (.Platform$OS.type == "unix") {
+      # ijmacs.folder1 <- sub(raw.video.folder, ijmacs.folder, video.dir)
+      writeLines(text, con = paste(to.data, ijmacs.folder, "/Video_overlay_tmp.ijm", sep = ""))
+    }
     
-  ## run ImageJ macro
-  system(cmd)
-  
-  }
-  else {
-    ##First get a list of all the video files
-    video.files <- list.files(path = video.dir, pattern = paste("\\.", video.format, sep=""))
-    video.files <- paste(video.dir, video.files, sep="/")
-    video.files.df <- as.data.frame(video.files)
+    ## create directory to store overlays
+    dir.create(paste0(to.data, overlay.folder), showWarnings = F)
     
+    ## call IJ macro to merge original video with the trajectory data
+    if (.Platform$OS.type == "unix") 
+      cmd <- paste0("java -Xmx", memory, "m -jar ", IJ.path, "/ij.jar", " -ijpath ", IJ.path, " -macro ", 
+                    paste0("'", paste0(to.data, ijmacs.folder), "Video_overlay_tmp.ijm", "'"))
+    
+    if (.Platform$OS.type == "windows") 
+      cmd <- paste0("\"", IJ.path, "\""," -macro ","\"", paste0(gsub("/", "\\\\", paste0(to.data, ijmacs.folder))), "Video_overlay_tmp.ijm", "\"")
+    
+    ## run ImageJ macro
+    system(cmd)
+  } else {
     #Divide the videos between the processors that can be used
     video.files.df$process <- ceiling(seq(from=0.001, to=processes, length=nrow(video.files.df)))
     
     mclapply(1:processes, create_overlays_parallel, video.files.df, traj.data, to.data, merged.data.folder, raw.video.folder, temp.overlay.folder, overlay.folder, 
-                                                     width, height, difference.lag, type,  predict_spec, contrast.enhancement, IJ.path, memory, mc.cores=processes)
-             
-             
-    }
+             width, height, difference.lag, type,  predict_spec, contrast.enhancement, IJ.path, memory, mc.cores=processes)
+  }
   
-#   ## delete temporary file after execution
-#   if (.Platform$OS.type == "windows") 
-#     file.remove(paste0(to.data,ijmacs.folder,"Video_overlay_tmp.ijm")
+  
+  #   ## delete temporary file after execution
+  #   if (.Platform$OS.type == "windows") 
+  #     file.remove(paste0(to.data,ijmacs.folder,"Video_overlay_tmp.ijm")
   
 }
