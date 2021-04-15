@@ -80,6 +80,9 @@ locate_and_measure_particles <- function(to.data, raw.video.folder, particle.dat
   } else {
     #Otherwise, perform the parallellized analysis
     
+    ## create directory to store Particle Analyzer data
+    dir.create(paste0(to.data, particle.data.folder), showWarnings = FALSE)
+    
     #Divide the videos between the processors that can be used
     video.files.df$process <- ceiling(seq(from=0.001, to=processes, length=nrow(video.files.df)))
     
