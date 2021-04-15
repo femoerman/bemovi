@@ -147,7 +147,7 @@ create_overlays_parallel <- function(process_ID, video.files.df, traj.data, to.d
   dir.create(paste0(to.data, overlay.folder), showWarnings = F)
   
   #Create subfolder for video output
-  subfolder.output <- paste0(to.data, overlay.folder, "/", process_ID)
+  subfolder.output <- paste0(to.data, overlay.folder, "/", process_ID, "/")
   dir.create(subfolder.output, showWarnings = F)
   
   text[grep("video_input = ", text)] <- paste("video_input = ", "'", temp.dir, "';", sep = "")
