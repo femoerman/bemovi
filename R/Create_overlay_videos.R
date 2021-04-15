@@ -183,6 +183,36 @@ create_overlays <- function(traj.data, to.data, merged.data.folder, raw.video.fo
     
     mclapply(1:processes, create_overlays_parallel, video.files.df, traj.data, to.data, merged.data.folder, raw.video.folder, temp.overlay.folder, overlay.folder, 
              width, height, difference.lag, type,  predict_spec, contrast.enhancement, IJ.path, memory, mc.cores=processes)
+    
+    ## copy master copy of ImageJ macro there for treatment
+    if (.Platform$OS.type == "unix") 
+      text <- readLines(paste0(system.file(package="bemovi"), "/","ImageJ_macros/Video_overlay.ijm"))
+    
+    
+    ## create directory to store overlays
+    dir.create(paste0(to.data, overlay.folder), showWarnings = F)
+    
+    text[grep("video_input = ", text)] <- paste("video_input = ", "'", video.dir, "';", sep = "")
+    text[grep("overlay_input = ", text)] <- paste("overlay_input = ", "'", paste0(to.data, temp.overlay.folder), "';", sep = "")
+    text[grep("overlay_output = ", text)] <- paste("overlay_output = ", "'", paste0(to.data, overlay.folder), "';", sep = "")
+    text[grep("lag =", text)] <- paste("lag = ", difference.lag, ";", sep = "") 
+    text[grep("Enhance Contrast", text)] <- paste("run(\"Enhance Contrast...\", \"saturated=", contrast.enhancement, " process_all\");", sep = "")
+    if (predict_spec==T){text[grep("RGB Color", text)] <- paste('run(\"RGB Color\");')}
+    
+    ## re-create ImageJ macro for batch processing of video files with ParticleTracker
+    if (.Platform$OS.type == "unix") {
+      # ijmacs.folder1 <- sub(raw.video.folder, ijmacs.folder, video.dir)
+      writeLines(text, con = paste(to.data, ijmacs.folder, "Video_overlay_tmp.ijm", sep = ""))
+    }
+    
+    ## call IJ macro to merge original video with the trajectory data
+    
+    if (.Platform$OS.type == "unix") 
+      cmd <- paste0("java -Xmx", memory, "m -jar ", ij.temp, "/ij.jar", " -ijpath ", ij.temp, " -macro ", 
+                    paste0("'", paste0(to.data, ijmacs.folder), "Video_overlay_tmp.ijm", "'"))
+    
+    ## run ImageJ macro
+    system(cmd)
   }
   
   
