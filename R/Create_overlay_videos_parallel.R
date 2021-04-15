@@ -25,16 +25,16 @@
 create_overlays_parallel <- function(process_ID, video.files.df, traj.data, to.data, merged.data.folder, raw.video.folder, temp.overlay.folder, overlay.folder, 
                             width, height, difference.lag, type = "traj",  predict_spec=F, contrast.enhancement = 0, IJ.path, memory = 512) {
   
-  #Filter the df to get a list of the videos that will be analyzed by this processor core
+  ##Define folder with video files
+  video.dir <- paste(to.data, raw.video.folder, sep="")$
+    
+    #Filter the df to get a list of the videos that will be analyzed by this processor core
   video.files.filt <- as.character(video.files.df[which(video.files.df$process==process_ID), "video.files"])
   videos <- unlist(strsplit(video.files.filt, split = "/"))
   videos <- videos[startsWith(videos, "sample_")]
   videos <- substr(videos,1,nchar(videos)-4)
   traj.data.filt <- traj.data[which(traj.data$file %in% videos), ]
   file_names <- unique(traj.data.filt$file)
-  
-  ##Define folder with video files
-  video.dir <- paste(to.data, raw.video.folder, sep="")
   
   #Make a temporary folder and move the videos there
   temp.dir <- paste0(video.dir, process_ID, sep="/")
