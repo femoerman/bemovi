@@ -25,7 +25,7 @@
 
 create_overlays <- function(traj.data, to.data, merged.data.folder, raw.video.folder, temp.overlay.folder, overlay.folder, 
                             width, height, difference.lag, type = "traj",  predict_spec=F, contrast.enhancement = 0, IJ.path, memory = 512,
-                            max.cores=detectCores()-1, memory.per.overlay=30000) {$
+                            max.cores=detectCores()-1, memory.per.overlay=30000) {
     
     
   #traj.data<-trajectory<-ijmacs.folder<-NULL
