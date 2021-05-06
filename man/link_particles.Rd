@@ -12,7 +12,8 @@ link_particles(
   disp = 10,
   start_vid = 1,
   memory = 512,
-  memory_per_linkerProcess = 512
+  memory_per_linkerProcess = 512,
+  raw.avi.folder
 )
 }
 \arguments{
@@ -32,6 +33,8 @@ are taken into account when a trajectory is re-constructed}
 \item{memory}{numeric value specifying the max amount of memory allocated in general (defaults to 512)}
 
 \item{memory_per_linkerProcess}{numeric value specifying the max amount of memory allocated to one instance of the ParticleLinker (defaults to 512)}
+
+\item{raw.avi.folder}{Folder containing the converted and compressed .avi files}
 }
 \value{
 Returns a single text file per video containing the X- and Y-coordinates, the frame and a trajectory ID. The files are than automatically merged into a data.table

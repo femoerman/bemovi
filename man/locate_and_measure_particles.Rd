@@ -6,22 +6,22 @@
 \usage{
 locate_and_measure_particles(
   to.data,
-  raw.video.folder,
+  raw.avi.folder,
   particle.data.folder,
   difference.lag,
   min_size = 0,
   max_size = 10000,
   thresholds = c(10, 255),
-  IJ.path,
+  tools.path,
   memory = 512,
   memory.per.identifier = 10000,
-  max.cores = detectCores() - 1
+  max.cores = 1
 )
 }
 \arguments{
 \item{to.data}{path to the working directory}
 
-\item{raw.video.folder}{directory with the raw video files}
+\item{raw.avi.folder}{directory with the raw avi files (converted and compressed from the raw videos)}
 
 \item{particle.data.folder}{directory to which the data is saved as a text file}
 
@@ -34,7 +34,7 @@ compute the difference image. If 0, then no differencing applied.}
 
 \item{thresholds}{vector containing the min and max threshold values (defaults to c(10,255))}
 
-\item{IJ.path}{path to ImageJ folder, containing the 'ij.jar' executable}
+\item{tools.path}{path to the directory where the tools for bemovi (fiji, ffmpeg and bftools) are stored}
 
 \item{memory}{numeric value specifying the amount of memory available to ImageJ (defaults to 512)}
 
@@ -50,5 +50,5 @@ circularity, aspect ratio, roundness and solidity. For details of the morphologi
 }
 \description{
 Function calls ImageJ software and its ParticleAnalyzer function to extract for each frame of the video
-several morphological descriptors and the X- and Y-coordinates of all moving particles. All videos in the raw.video.folder are analyses, separately.
+several morphological descriptors and the X- and Y-coordinates of all moving particles. All videos in the raw.avi.folder are analyses, separately.
 }

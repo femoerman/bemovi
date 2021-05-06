@@ -20,7 +20,7 @@ create_overlays(
   IJ.path,
   memory = 512,
   max.cores = detectCores() - 1,
-  memory.per.overlay = 30000
+  memory.per.overlay = 5000
 )
 }
 \arguments{
@@ -56,7 +56,7 @@ remains plotted (type='traj').}
 
 \item{max.cores}{Max number of cores that can be used for overlay making. Defaults to number of machine cores -1}
 
-\item{memory.per.overlay}{Numeric value, specifiying the amount of memory to be reserved for each overlay process. Defaults to 30000}
+\item{memory.per.overlay}{Numeric value, specifiying the amount of memory to be reserved for each overlay process. Defaults to 5000}
 }
 \description{
 A function to overlay the extracted trajectories onto the original video, using plots created in R and then processed in 

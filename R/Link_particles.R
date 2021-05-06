@@ -12,6 +12,7 @@
 #' are taken into account when a trajectory is re-constructed 
 #' @param disp numeric value that specifies the maximum displacement of a given particle between two frames
 #' @param start_vid numeric value to indicate whether the linking should be started with a video other than the first
+#' @param raw.avi.folder Folder containing the converted and compressed .avi files
 #' @return Returns a single text file per video containing the X- and Y-coordinates, the frame and a trajectory ID. The files are than automatically merged into a data.table
 #' with the movement metrics for each fix appended to the original data (NB: movement metrics often need two (e.g. step length), sometimes even 
 #' three (e.g., turning angles) fixes; fixes for which metrics cannot be calculated are padded with NA). The movement parameters are the step length, the step duration, 
@@ -21,9 +22,7 @@
 #' @import parallel 
 #' @export
 
-link_particles <- function(to.data, particle.data.folder, trajectory.data.folder, linkrange = 1, disp = 10, start_vid = 1, memory = 512, memory_per_linkerProcess = 512) {
-  
-  #Slice<-to.particlelinker<-java.path<-pixel_to_scale<-fps<-NULL
+link_particles <- function(to.data, particle.data.folder, trajectory.data.folder, linkrange = 1, disp = 10, start_vid = 1, memory = 512, memory_per_linkerProcess = 512, raw.avi.folder) {
   
   if(!exists("to.particlelinker")) stop("Path to ParticleLinker not found. Please specify path in global options.")
   
@@ -39,26 +38,20 @@ link_particles <- function(to.data, particle.data.folder, trajectory.data.folder
   mem_ratio <- floor(memory/memory_per_linkerProcess)
   no_cores <- detectCores()
   max_linker_processes <- min(c(mem_ratio, no_cores - 1))
-  
-  # vector for saving all PIDs for parallellisation
-  all_pids <- numeric()
-  
-  # counter variable for pids
-  pid_cnt <- 0
-  
+
   # Create folder for logs
-  dir.create("linkingLogs/")
+  dir.create("linkingLogs/", showWarnings = F)
   
-  for (j in start_vid:length(all.files)) {
-    
+  #Create a function for parallelized linking
+  linkingParallel <- function(j, all.files, PA_output_dir){
     PA_data <- read.table(paste0(PA_output_dir, "/", all.files[j]), sep = "\t", header = T)
     
     ## only attempt particle linking if particles were detected in the video note: not sure what would happen if only one
     ## particle was found in one frame
     if (length(PA_data[, 1]) > 0) {
       
-      dir <- paste0(to.data, gsub(".cxd", "", sub(".ijout.txt", "", all.files[j])))
-      dir.create(dir)
+      dir <- paste0(to.data, gsub(".avi", "", sub(".ijout.txt", "", all.files[j])))
+      dir.create(dir, showWarnings = F)
       
       for (i in 1:max(PA_data$Slice)) {
         frame <- subset(PA_data, Slice == i)[, c(6, 7)]
@@ -77,88 +70,22 @@ link_particles <- function(to.data, particle.data.folder, trajectory.data.folder
                       " -jar ", " \"", to.particlelinker, "/ParticleLinker.jar","\" ", "'", dir, "'", " \"", traj_out.dir,"/ParticleLinker_", 
                       all.files[j],"\"", " 2>&1 | tee ",to.data, "linkingLogs/log", j, ".txt")
         
-        # execute command, do not wait for process to end
-        system(paste0(cmd," & echo $! >",to.data,"tmp_pid.txt"), wait=F)
-        # wait 1 sec for writing process etc
-        Sys.sleep(1)
-        # save PID
-        pid_cnt <- pid_cnt + 1
-        all_pids[pid_cnt] <- as.numeric(read.table(file=paste0(to.data,"tmp_pid.txt"), header=F))
-        # remove temporary pid file
-        system(paste0("rm ",to.data,"tmp_pid.txt"))
-        
       }
       
-      if (.Platform$OS.type == "windows") {
-        
-        if(!exists("java.path")) stop("Java path not found. Please specify path in global options.")
-        
-        # previously hardcoded as "C:/Progra~2/java/jre7/bin/javaw.exe"
-        cmd <- paste0(java.path, " -Xmx", memory,"m -Dparticle.linkrange=", linkrange, " -Dparticle.displacement=", disp," -jar",
-                      gsub("/","\\\\", paste0(" \"" ,to.particlelinker,"/ParticleLinker.jar")),"\" ",
-                      gsub("/","\\\\", paste0(" ","\"" ,dir,"\"")),
-                      gsub("/","\\\\", paste0(" ","\"", traj_out.dir, "/ParticleLinker_", all.files[j], "\"")))
-        
-        system(cmd)
-      }
-      
-      #delete working dir
-      #unlink(dir, recursive = TRUE)
-      
+      system(cmd, timeout=(2600*24*7))
     }
     
     if (length(PA_data[, 1]) == 0) {
       print(paste("***** No particles were detected in video", all.files[j], " -- check the raw video and also threshold values"))
       
     }
-    
-    # wait before continuing with loop until less linker processes run than maximally allowed
-    repeat{
       
-      #check which linker processes are still running
-      running_pids <- is.element(all_pids,as.numeric(system("pgrep java", intern=T)))
       
-      # update list
-      all_pids <- all_pids[which(running_pids == T)]
-      pid_cnt <- length(all_pids)
-      
-      # count running linker processes: I am actually counting java processes
-      act_linker_processes <- pid_cnt
-      
-      # end repeat loop if less linker processes run than allowed
-      if(act_linker_processes < max_linker_processes){
-        break
-      }else{
-        # else wait for 1 second before checking again
-        Sys.sleep(1)
-      }
-      
-    }
   }
   
-  
-  # before continuing: wait until last/ slowest file has been linked!
-  repeat{
-    
-    #check which linker processes are still running
-    running_pids <- is.element(all_pids,as.numeric(system("pgrep java", intern=T)))
-    
-    # update list
-    all_pids <- all_pids[which(running_pids == T)]
-    pid_cnt <- length(all_pids)
-    
-    # count running linker processes: I am actually counting java processes
-    act_linker_processes <- pid_cnt
-    
-    # end repeat loop if no linker processes are running anymore
-    if(act_linker_processes == 0){
-      break
-    }else{
-      # else wait for 1 second before checking again
-      Sys.sleep(1)
-    }
-    
-  }
+  #Perform parallelized analysis
+  #start <- Sys.time()
+  parallel::mclapply(start_vid:length(all.files), linkingParallel, all.files, PA_output_dir, mc.cores = max_linker_processes)
   
   # merge all files into one database
   data <- organise_link_data(to.data, trajectory.data.folder) 
@@ -167,7 +94,7 @@ link_particles <- function(to.data, particle.data.folder, trajectory.data.folder
   calculate_mvt(data,to.data,trajectory.data.folder,pixel_to_scale,fps)
   
   # delete working directories
-  unlink(paste0(to.data, gsub(".cxd", "", sub(".ijout.txt", "", all.files))), recursive = T)
+  unlink(paste0(to.data, gsub(".avi", "", sub(".ijout.txt", "", all.files))), recursive = T)
   
   #create a counter for the potential errors
   error.count <- 0
@@ -186,6 +113,8 @@ link_particles <- function(to.data, particle.data.folder, trajectory.data.folder
     if(error.count>0){
       messageError <- paste("Java ran out of memory while linking", error.count, "video(s). Try increasing the assigned memory per linking process")
       stop(messageError)
+    } else {
+      print("No memory errors occured during particle Linking")
     }
   }
 }

@@ -2,7 +2,10 @@
 
 export(calculate_mvt)
 export(check_threshold_values)
+export(check_tools_folder)
 export(check_video_file_names)
+export(convert_to_avi)
+export(create.subtitle.overlays)
 export(create_overlays)
 export(create_overlays_parallel)
 export(filter_data)

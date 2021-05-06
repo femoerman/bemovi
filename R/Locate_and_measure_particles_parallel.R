@@ -6,17 +6,16 @@
 #' folder with an ImageJ/Java copy
 #' @param process_ID numeric variable, containing the identifier for the parallel process
 #' @param to.data path to the working directory
-#' @param raw.video.folder directory with the raw video files 
+#' @param raw.avi.folder directory with the compressed avi files 
 #' @param particle.data.folder directory to which the data is saved as a text file
 #' @param difference.lag numeric value specifying the offset between two video frames to 
 #' compute the difference image. If 0, then no differencing applied.
 #' @param min_size minimum size for detection of particles
 #' @param max_size maximum size for detection of particles
 #' @param thresholds vector containing the min and max threshold values (defaults to c(10,255))
-#' @param IJ.path path to ImageJ folder, containing the 'ij.jar' executable
-#' @param memory numeric value specifying the amount of memory available to ImageJ (defaults to 512)
+#' @param tools.path Path containing the bemovi dependencies
+#' @param memory numeric value specifying the amount of memory available to ImageJ
 #' @param video.files.df Dataframe containing the video files in the raw data, as well as the process ID for the parallel analysis
-#' @param video.dir Folder containing all video files
 #' @return saves the output of the ParticleAnalyzer function of ImageJ as a text file in the output directory and then assembles the data into a single database 
 #' called 'particle.RData'. This data.frame contains information about the following properties: the area (transversal cut), 
 #' the mean, minimum and maximum of the grey value, the perimeter, width, length and angle with the dominant-axis of a fitted ellipse, and finally shape parameters such as
@@ -24,12 +23,13 @@
 #' @import parallel 
 #' @export 
 
-parallel_locate_and_measure <- function(process_ID, to.data, raw.video.folder, particle.data.folder, difference.lag, min_size, max_size, 
-                                        thresholds, IJ.path, memory, 
-                                        video.files.df, video.dir){
+parallel_locate_and_measure <- function(process_ID, to.data, raw.avi.folder, particle.data.folder, difference.lag, min_size, max_size, 
+                                        thresholds, tools.path, memory, video.files.df){
+  
+  video.dir <- paste0(to.data, raw.avi.folder)
   
   #Filter the df to get a list of the videos that will be analyzed by this processor core
-  video.files.filt <- as.character(video.files.df[which(video.files.df$process==process_ID), "video.files"])
+  video.files.filt <- as.character(video.files.df[which(video.files.df$process==process_ID), 1])
   
   #Make a temporary folder and move the videos there
   temp.dir <- paste0(video.dir, process_ID, sep="/")
@@ -61,21 +61,26 @@ parallel_locate_and_measure <- function(process_ID, to.data, raw.video.folder, p
   
   ##Create temporary copy of the imageJ folder
   if (.Platform$OS.type == "unix") {
-    IJ.temp <- paste0(temp.dir, "ImageJ")
-    system(paste("cp -R ", IJ.path, " ", temp.dir, sep=""))}
+    IJ.temp.folder <- paste0(to.data, "ImageJ", process_ID, "/")
+    system(paste("cp -R ", tools.path, "/Fiji.app ", IJ.temp.folder, sep=""))
+    IJ.path <- paste0(IJ.temp.folder, "/ImageJ-linux64")
+    fiji.path <- paste0(IJ.temp.folder, "/jars/ij-1.52p.jar")
+    
+    }
     
   #Call particle analyzer
   if (.Platform$OS.type == "unix") {
-    cmd <- paste0("java -Xmx", memory, "m -jar ", IJ.temp, "/ij.jar", " -ijpath ", IJ.temp, " -macro ","'", 
+    cmd <- paste0("java -Xmx", memory, "m -jar ", fiji.path, " -ijpath ", IJ.path, " -macro ","'", 
                   ijmacs.file, "'")}
   system(cmd)
   
   #Move videos back to original folder and delete temporary folder
-  temp.files <- list.files(path = temp.dir, pattern = paste("\\.", video.format, sep=""))
+  temp.files <- list.files(path = temp.dir, pattern = paste("\\.avi", sep=""))
   temp.files <- paste(temp.dir, temp.files, sep="/")
   if (.Platform$OS.type == "unix") {
     system(paste("mv -t", video.dir, paste(unlist(temp.files), collapse=' ')))
     system(paste("rm -r ", temp.dir))
+    system(paste("rm -r ", IJ.temp.folder))
   }
 }
     

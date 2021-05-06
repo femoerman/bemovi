@@ -7,16 +7,15 @@
 parallel_locate_and_measure(
   process_ID,
   to.data,
-  raw.video.folder,
+  raw.avi.folder,
   particle.data.folder,
   difference.lag,
   min_size,
   max_size,
   thresholds,
-  IJ.path,
+  tools.path,
   memory,
-  video.files.df,
-  video.dir
+  video.files.df
 )
 }
 \arguments{
@@ -24,7 +23,7 @@ parallel_locate_and_measure(
 
 \item{to.data}{path to the working directory}
 
-\item{raw.video.folder}{directory with the raw video files}
+\item{raw.avi.folder}{directory with the compressed avi files}
 
 \item{particle.data.folder}{directory to which the data is saved as a text file}
 
@@ -37,13 +36,11 @@ compute the difference image. If 0, then no differencing applied.}
 
 \item{thresholds}{vector containing the min and max threshold values (defaults to c(10,255))}
 
-\item{IJ.path}{path to ImageJ folder, containing the 'ij.jar' executable}
+\item{tools.path}{Path containing the bemovi dependencies}
 
-\item{memory}{numeric value specifying the amount of memory available to ImageJ (defaults to 512)}
+\item{memory}{numeric value specifying the amount of memory available to ImageJ}
 
 \item{video.files.df}{Dataframe containing the video files in the raw data, as well as the process ID for the parallel analysis}
-
-\item{video.dir}{Folder containing all video files}
 }
 \value{
 saves the output of the ParticleAnalyzer function of ImageJ as a text file in the output directory and then assembles the data into a single database 
