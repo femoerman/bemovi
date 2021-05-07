@@ -11,10 +11,14 @@
 #' @param vid.length duration in seconds of the video
 #' @param width width in pixels of the original videos
 #' @param height height in pixels of the original video
+#' @param tools.path path to the dependency folder
 #' @return returns nothing (NULL)
 #' @export 
 
-create.subtitle.overlays <- function(to.data, traj.data, raw.avi.folder, temp.overlay.folder, overlay.folder, fps, vid.length, width, height){
+create.subtitle.overlays <- function(to.data, traj.data, raw.avi.folder, temp.overlay.folder, overlay.folder, fps, vid.length, width, height, tools.path){
+  
+  #Define ffmpeg location
+  ffmpeg <- paste0(tools.path, "/ffmpeg/ffmpeg")
   
   #Define folder to store the temporary subtitles
   temp.overlays <- paste0(to.data, temp.overlay.folder)
@@ -25,7 +29,7 @@ create.subtitle.overlays <- function(to.data, traj.data, raw.avi.folder, temp.ov
   #Define in the filtered trajectory data the start and end time of each observation, as well as the numeric ID of the observation
   traj.data$starttime <- (traj.data$frame)*(1/fps)
   traj.data$endtime <- traj.data$starttime + (1/fps)
-  traj.data$ID.vid <- substr(traj.data$id, 14, nchar(traj.data$id))
+  traj.data$ID.vid <- traj.data$trajectory
   
   #Generate a subtitle line for each observation
   traj.data$subtitle <- paste0("Dialogue: 0,0:00:", sprintf("%05.2f", traj.data$starttime), ",0:00:", sprintf("%05.2f", traj.data$endtime), ",DefaultVCD,,0000,0000,0000,,{\\pos(", 
@@ -54,7 +58,7 @@ create.subtitle.overlays <- function(to.data, traj.data, raw.avi.folder, temp.ov
     avi <- grep(i, avi.files, value = T)
     ssa <- grep(i, ssa.files, value = T)
     output <- paste0(to.data, overlay.folder, i, ".avi")
-    system(paste0('ffmpeg -i ', avi, ' -vf "ass=', ssa, '" -b:v 50M -c:a copy -y ', output))
+    system(paste0(ffmpeg, ' -i ', avi, ' -vf "ass=', ssa, '" -b:v 50M -c:a copy -y ', output))
   }
   
   return(NULL)
