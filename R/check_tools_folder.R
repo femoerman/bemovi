@@ -60,6 +60,11 @@ check_tools_folder <- function(tools.path){
     
     #Remove the .zip file
     unlink(file.path(tools.path, "bftools.zip"))
+    
+    #Make .sh file executable
+    system(paste0("chmod a+x ", tools.path, "bftools/bf.sh"))
+    system(paste0("chmod a+x ", tools.path, "bftools/bfconvert"))
+    system(paste0("chmod a+x ", tools.path, "bftools/showinf"))
   }
   
   if(!file.exists(paste0(tools.path, "/Fiji.app/java/"))){
