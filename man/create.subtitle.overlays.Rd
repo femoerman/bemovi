@@ -13,7 +13,9 @@ create.subtitle.overlays(
   fps,
   vid.length,
   width,
-  height
+  height,
+  tools.path,
+  overlay.type = "both"
 )
 }
 \arguments{
@@ -34,6 +36,10 @@ create.subtitle.overlays(
 \item{width}{width in pixels of the original videos}
 
 \item{height}{height in pixels of the original video}
+
+\item{tools.path}{path to the dependency folder}
+
+\item{overlay.type}{option for the overlays. overlays can either be shown as trajectory numbers ("number"), circle ("circle") or both ("both"). Defaults to both.}
 }
 \value{
 returns nothing (NULL)
