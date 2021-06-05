@@ -13,6 +13,7 @@
 #' @param disp numeric value that specifies the maximum displacement of a given particle between two frames
 #' @param start_vid numeric value to indicate whether the linking should be started with a video other than the first
 #' @param raw.avi.folder Folder containing the converted and compressed .avi files
+#' @param max.cores Maximum number of cores to be used. Defaults to 1
 #' @return Returns a single text file per video containing the X- and Y-coordinates, the frame and a trajectory ID. The files are than automatically merged into a data.table
 #' with the movement metrics for each fix appended to the original data (NB: movement metrics often need two (e.g. step length), sometimes even 
 #' three (e.g., turning angles) fixes; fixes for which metrics cannot be calculated are padded with NA). The movement parameters are the step length, the step duration, 
@@ -22,7 +23,7 @@
 #' @import parallel 
 #' @export
 
-link_particles <- function(to.data, particle.data.folder, trajectory.data.folder, linkrange = 1, disp = 10, start_vid = 1, memory = 512, memory_per_linkerProcess = 512, raw.avi.folder) {
+link_particles <- function(to.data, particle.data.folder, trajectory.data.folder, linkrange = 1, disp = 10, start_vid = 1, memory = 512, memory_per_linkerProcess = 512, raw.avi.folder, max.cores=1) {
   
   if(!exists("to.particlelinker")) stop("Path to ParticleLinker not found. Please specify path in global options.")
   
@@ -37,7 +38,7 @@ link_particles <- function(to.data, particle.data.folder, trajectory.data.folder
   # determine how many proceses to run in parallel based on memory usage and available cores
   mem_ratio <- floor(memory/memory_per_linkerProcess)
   no_cores <- detectCores()
-  max_linker_processes <- min(c(mem_ratio, no_cores - 1))
+  max_linker_processes <- min(c(mem_ratio, no_cores - 1, max.cores))
 
   # Create folder for logs
   dir.create("linkingLogs/", showWarnings = F)
