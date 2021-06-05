@@ -11,7 +11,7 @@
 #' @return returns nothing (NULL)
 #' @export 
 
-convert_to_avi <- function(to.data, raw.video.folder, raw.avi.folder, metadata.folder, tools.path, fps, video.format){
+convert_to_avi <- function(to.data, raw.video.folder, raw.avi.folder, metadata.folder, tools.path, fps, video.format, compression_level=4){
   
   #Define input.folder
   input.folder <- paste0(to.data, raw.video.folder)
@@ -54,21 +54,12 @@ convert_to_avi <- function(to.data, raw.video.folder, raw.avi.folder, metadata.f
       system2(command=bfconvert, args = arguments, stdout = NULL)
     }
       
-    #If one use cxd, first convert to avi using bioformats package, then compress using ffmpeg
-    if(video.format=="cxd"){
-      
-      #Create and run a system command to compress the video and enhance contrast
-      arguments <- paste0(" -y -r ", fps, " -i ", tempfile, " -vcodec png -compression_level 10 -vtag 'PNG ' ", output.file)
+    #Compress using ffmpeg
+    #Create and run a system command to compress the video and enhance contrast
+      arguments <- paste0(" -i' ", tempfile,  "' -y -vcodec png -vf 'setpts=N/", fps, "/TB' -r ", fps, " -compression_level ", compression_level, " -vtag 'PNG ' '", output.file, "'")
       message("Compressing ", tempfile)
       system2(command=ffmpeg, args = arguments, stdout = NULL)
       
-    } else{
-      
-      #If one instead uses an other format, just compress the videos to .avi format  directly using ffmpreg, and enhance contrast
-      arguments <- paste0(" -y -r ", fps, " -i ", filename, " -vcodec png -compression_level 10 -vtag 'PNG ' ", output.file)
-      message("Converting and compressing ", filename)
-      system2(command=ffmpeg, args = arguments, stdout = NULL)
-    }
     
     if(video.format=="cxd"){
       #Create and run a system command to extract and store the metadata

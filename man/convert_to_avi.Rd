@@ -11,7 +11,8 @@ convert_to_avi(
   metadata.folder,
   tools.path,
   fps,
-  video.format
+  video.format,
+  compression_level = 4
 )
 }
 \arguments{
