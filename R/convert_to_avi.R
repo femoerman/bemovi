@@ -32,6 +32,8 @@ convert_to_avi <- function(to.data, raw.video.folder, raw.avi.folder, metadata.f
     #Create a folder for the stored metadata folder
     meta.folder <- paste0(to.data, metadata.folder)
     dir.create(meta.folder, showWarnings = F)
+  } else {
+    temp.folder <- paste0(to.data, raw.avi.folder)
   }
   
   #Define the paths to ffmpeg and bftools
@@ -56,7 +58,7 @@ convert_to_avi <- function(to.data, raw.video.folder, raw.avi.folder, metadata.f
       
     #Compress using ffmpeg
     #Create and run a system command to compress the video and enhance contrast
-      arguments <- paste0(" -i ' ", tempfile,  "' -y -vcodec png -vf 'setpts=N/", fps, "/TB' -r ", fps, " -compression_level ", compression_level, " -vtag 'PNG ' '", output.file, "'")
+      arguments <- paste0(" -i '", tempfile,  "' -y -vcodec png -vf 'setpts=N/", fps, "/TB' -r ", fps, " -compression_level ", compression_level, " -vtag 'PNG ' '", output.file, "'")
       message("Compressing ", tempfile)
       system2(command=ffmpeg, args = arguments, stdout = NULL)
       
