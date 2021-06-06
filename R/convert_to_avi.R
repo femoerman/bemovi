@@ -55,6 +55,7 @@ convert_to_avi <- function(to.data, raw.video.folder, raw.avi.folder, metadata.f
       message("Converting ", filename)
       system2(command=bfconvert, args = arguments, stdout = NULL)
     }
+    
       
     #Compress using ffmpeg
     #Create and run a system command to compress the video and enhance contrast
