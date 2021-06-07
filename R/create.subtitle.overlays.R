@@ -78,7 +78,7 @@ create.subtitle.overlays <- function(to.data, traj.data, raw.avi.folder, temp.ov
     avi <- grep(i, avi.files, value = T)
     ssa <- grep(i, ssa.files, value = T)
     output <- paste0(to.data, overlay.folder, i, ".avi")
-    system(paste0(ffmpeg, ' -i ', avi, ' -vf "ass=', ssa, '" -b:v 50M -c:a copy -y ', output))
+    system(paste0(ffmpeg, ' -i ', avi, ' -vf "ass=', ssa, '" -y ', output))
   }
   
   return(NULL)
