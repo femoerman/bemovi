@@ -25,15 +25,9 @@ convert_to_avi <- function(to.data, raw.video.folder, raw.avi.folder, metadata.f
   
   #Make the additional folders if one starts from .cxd files
   if(video.format=="cxd"){
-    #Create a folder for the temporary files (converted but not yet compressed)
-    temp.folder <- paste0(to.data, "temp.avi.folder/")
-    dir.create(temp.folder, showWarnings = F)
-    
     #Create a folder for the stored metadata folder
     meta.folder <- paste0(to.data, metadata.folder)
     dir.create(meta.folder, showWarnings = F)
-  } else {
-    temp.folder <- paste0(to.data, raw.avi.folder)
   }
   
   #Define the paths to ffmpeg and bftools
@@ -45,42 +39,71 @@ convert_to_avi <- function(to.data, raw.video.folder, raw.avi.folder, metadata.f
   
   for (filename in video.files){
     output.file <- unlist(strsplit(filename, "/")[[1]])
-    tempfile <- paste0(temp.folder, "/", tools::file_path_sans_ext(output.file[length(output.file)]), ".avi")
     metadata <- paste0(meta.folder, "/", tools::file_path_sans_ext(output.file[length(output.file)]), ".txt")
     output.file <- paste0(output.folder, "/", tools::file_path_sans_ext(output.file[length(output.file)]), ".avi")
       
     if(video.format=="cxd"){
-      #Create a system command to convert the video using bioformats
-      arguments <- paste0( " -overwrite -no-upgrade ", filename, " ", tempfile)
-      message("Converting ", filename)
-      system2(command=bfconvert, args = arguments, stdout = NULL)
-    }
-    
       
-    #Compress using ffmpeg
-    #Create and run a system command to compress the video and enhance contrast
-      arguments <- paste0(" -i '", tempfile,  "' -y -vcodec png -vf 'setpts=N/", fps, "/TB' -r ", fps, " -compression_level ", compression_level, " -vtag 'PNG ' '", output.file, "'")
-      message("Compressing ", tempfile)
-      system2(command=ffmpeg, args = arguments, stdout = NULL)
+      #Create temporary folder for .tiff stack
+      tiff.folder <- paste0(to.data, "/tiff", match(filename, video.files))
+      dir.create(tiff.folder)
       
-    
-    if(video.format=="cxd"){
+      #Convert cxd to tiff
+      {
+        #Prepare arguments
+        arguments <- paste0(
+          " -overwrite",
+          " -no-upgrade ",
+          " '", filename, "'",
+          " -padded",
+          " '", file.path(tiff.folder, "frame%t.tiff"), "'"
+        )
+        
+        #Run command
+        message("Converting ", filename, " to .tiff")
+        system2(
+          command = bfconvert,
+          args = arguments,
+          stdout = NULL
+        )
+      }
+      
+      #Convert tiff stack to avi using ffmpeg
+      {
+        #Prepare arguments
+        arguments <- paste0(
+          " -framerate ", fps,
+          " -pattern_type glob",
+          " -i  '", file.path(tiff.folder, "*.tiff"), "'",
+          " -y -vcodec png",
+          " -vtag 'PNG '",
+          " -compression_level ", compression_level,
+          " ", output.file
+        )
+        
+        #Run command
+        message("Compressing ", filename)
+        system2(
+          command = ffmpeg,
+          args = arguments,
+          stdout = NULL
+        )
+      }
+      
+      #Remove temporary folder with tiff stack
+      unlink(tiff.folder, recursive=T)
+      
+      
       #Create and run a system command to extract and store the metadata
       arguments <- paste0( " -nopix -no-upgrade ",  filename)
       message("Extracting metadata ", filename)
       system2(command=showinf, args = arguments, stdout = metadata)
       
+    } else {
+      arguments <- paste0(" -i '", filename,  "' -y -vcodec png -compression_level  -vtag 'PNG ' ", compression_level, " '", output.file, "'")
+      message("Compressing ", filename)
+      system2(command=ffmpeg, args = arguments, stdout = NULL)
     }
-      
-    
-      
     }
-  
-  
-
-  #Remove the temporary folder if one starts from .cxd files
-  if(video.format=="cxd"){
-    unlink(temp.folder, recursive=TRUE)
-  }
   return(NULL)
 }
